@@ -83,17 +83,17 @@ flowchart TB
     rediger --> publier
     classDef logiciel fill:#3996d2,stroke:#2b78ab,color:#ffffff
     classDef agent fill:#22b45a,stroke:#178a45,color:#ffffff
+    style rediger fill:#eef4fa,stroke:#c9d6e3,color:#1b2433
+    style publier fill:#eef4fa,stroke:#c9d6e3,color:#1b2433
 ```
 
 ## Comment ça marche : tout en local par défaut
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph poste["Votre machine"]
-        direction LR
         N["Navigateur<br>127.0.0.1:8878"] --> T["TerritorIA<br>(conteneur)"]
-        T -- "workflows" --> W["n8n<br>(conteneur, sans Internet)"]
-        W -- "API interne" --> T
+        T <-- "workflows, API interne" --> W["n8n<br>(conteneur, sans Internet)"]
         T --> L["LM Studio<br>IA locale"]
     end
     T -. "connecteurs publics,<br>désactivés par défaut" .-> P["Légifrance (PISTE)<br>data.gouv.fr"]
@@ -102,6 +102,7 @@ flowchart LR
     classDef dehors fill:#768093,stroke:#5c6575,color:#ffffff
     class N,T,W,L dedans
     class P,M dehors
+    style poste fill:#eef4fa,stroke:#c9d6e3,color:#1b2433
 ```
 
 En une ligne :
