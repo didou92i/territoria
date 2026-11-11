@@ -1,0 +1,342 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: EUPL-1.2 -->
+<!-- SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731) -->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TerritorIA — logiciel libre de rédaction d'actes, sur le poste de la collectivité</title>
+<meta name="description" content="TerritorIA aide les agents des collectivités à rédiger arrêtés, délibérations et procès-verbaux avec une IA installée sur leur poste. Libre, gratuit, EUPL 1.2.">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta property="og:title" content="TerritorIA — logiciel libre de rédaction d'actes, sur le poste de la collectivité">
+<meta property="og:description" content="Arrêtés, délibérations, séances du conseil : une IA installée sur le poste de la collectivité. Libre et gratuit, licence EUPL 1.2.">
+<meta property="og:url" content="https://territoria.ovh/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:site_name" content="TerritorIA">
+<meta property="og:image" content="https://territoria.ovh/logo-territoria.png">
+<meta property="og:image:width" content="194">
+<meta property="og:image:height" content="192">
+<meta property="og:image:alt" content="Logo de TerritorIA">
+<meta name="twitter:card" content="summary">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="favicon.png" type="image/png">
+<link rel="canonical" href="https://territoria.ovh/">
+<style>
+:root{--ink:#273247;--ink-2:#48556f;--muted:#66717f;--line:#e3e8ed;--surface:#f6f8fa;--wash:#eef6fb;--accent:#2f86c4;--accent-dark:#246fa4;--accent-deeper:#1d5a86;--accent-soft:#e8f5fc;--green:#277a5c;--green-soft:#e9f6ef;--white:#fff}
+*{box-sizing:border-box}
+/* scroll-padding-top : les ancres ne passent pas sous l'en-tête collant */
+html{scroll-behavior:smooth;scroll-padding-top:84px}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--white);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent-dark)}
+a:focus-visible,button:focus-visible{outline:3px solid var(--accent-dark);outline-offset:3px;border-radius:4px}
+svg.i{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 24px}
+.skip{position:absolute;left:-9999px;top:8px;background:var(--ink);color:#fff;padding:10px 14px;border-radius:6px;z-index:10}
+.skip:focus{left:16px}
+
+/* En-tête */
+header.top{position:sticky;top:0;z-index:5;background:rgba(255,255,255,.96);border-bottom:1px solid var(--line);backdrop-filter:saturate(1.4) blur(6px)}
+.top .wrap{display:flex;align-items:center;justify-content:space-between;gap:20px;height:68px}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#233c56;font-weight:750;font-size:21px;letter-spacing:-.8px}
+.brand-mark{display:grid;place-items:center;width:36px;height:36px;background:var(--accent-soft);border-radius:11px;color:#3397d4}
+.brand-mark svg{width:22px;height:22px}
+.brand-mark.logo{background:none;border-radius:0}.brand-mark.logo img{width:36px;height:36px;object-fit:contain}
+.signature{display:block;width:150px;height:auto;margin:0 0 18px}
+.brand b{color:#328fcc;font-weight:750}
+.top nav{display:flex;align-items:center;gap:26px}
+.top nav a{color:var(--ink-2);text-decoration:none;font-size:15px;font-weight:550}
+.top nav a:hover{color:var(--accent-dark)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border-radius:9px;padding:13px 20px;font-weight:650;font-size:16px;text-decoration:none;border:1px solid transparent;line-height:1.2}
+.btn svg{width:18px;height:18px}
+.btn-primary{background:var(--accent-dark);color:#fff;border-color:var(--accent-dark)}
+.btn-primary:hover{background:var(--accent-deeper);border-color:var(--accent-deeper)}
+.btn-ghost{background:#fff;color:var(--ink);border-color:#d6dee6}
+.btn-ghost:hover{background:var(--surface)}
+.top .btn{padding:9px 14px;font-size:14px}
+
+/* Accroche */
+.hero{background:linear-gradient(180deg,var(--wash) 0%,#fff 100%);border-bottom:1px solid var(--line)}
+.hero .wrap{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);gap:56px;align-items:center;padding-top:72px;padding-bottom:80px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--green);background:var(--green-soft);padding:6px 11px;border-radius:999px;margin:0 0 22px}
+.eyebrow svg{width:15px;height:15px}
+h1{font-size:clamp(34px,4.6vw,52px);line-height:1.08;letter-spacing:-1.6px;margin:0 0 22px;color:#1f2b3e}
+.lead{font-size:19px;color:var(--ink-2);margin:0 0 32px;max-width:560px}
+.cta{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:18px}
+.fine{font-size:14px;color:var(--muted);margin:0}
+.fine+.fine{margin-top:10px}
+
+/* Exemple d'arrêté */
+.paper{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 48px rgba(31,48,72,.12),0 2px 6px rgba(31,48,72,.05);padding:30px 32px 28px;font-family:Georgia,"Times New Roman",serif;font-size:14.5px;line-height:1.55;color:#2c3445;position:relative}
+.paper .tag{position:absolute;top:-13px;right:22px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:12px;font-weight:650;background:var(--green-soft);color:var(--green);border:1px solid #cfe9dc;border-radius:999px;padding:4px 10px;display:inline-flex;gap:6px;align-items:center}
+.paper .tag svg{width:13px;height:13px}
+.paper .entete{display:flex;justify-content:space-between;font-size:12px;color:#6b7482;border-bottom:1px solid #edf0f3;padding-bottom:12px;margin-bottom:16px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif}
+.paper .titre-acte{font-size:16px;text-align:center;letter-spacing:.04em;margin:0 0 4px}
+.paper .objet{text-align:center;font-style:italic;margin:0 0 16px;color:#4a5466}
+.paper p{margin:0 0 9px}
+.paper .vu{color:#4a5466}
+.paper .vu mark{background:#eaf4fb;color:#22618f;padding:0 3px;border-radius:3px}
+.paper .arrete{text-align:center;font-weight:700;letter-spacing:.1em;margin:14px 0 10px}
+.paper .fin{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;font-size:12px;color:var(--muted);border-top:1px solid #edf0f3;margin-top:14px;padding-top:10px}
+
+/* Sections */
+section{padding:88px 0}
+.alt{background:var(--surface);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.head{max-width:720px;margin:0 0 44px}
+.kicker{font-size:14px;font-weight:700;color:var(--accent-dark);margin:0 0 10px}
+h2.titre{font-size:clamp(27px,3vw,36px);line-height:1.15;letter-spacing:-.9px;margin:0 0 14px;color:#1f2b3e}
+.head p{margin:0;color:var(--muted);font-size:18px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px 24px 22px}
+.card .ic{display:grid;place-items:center;width:42px;height:42px;border-radius:11px;background:var(--accent-soft);color:var(--accent-dark);margin-bottom:16px}
+.card .ic.g{background:var(--green-soft);color:var(--green)}
+.card h3{font-size:18px;margin:0 0 8px;letter-spacing:-.2px}
+.card p{margin:0;color:var(--muted);font-size:15.5px}
+
+.prive{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);gap:56px;align-items:start}
+.flux{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px}
+.flux ol{list-style:none;margin:0;padding:0;counter-reset:f}
+.flux li{display:flex;gap:14px;align-items:flex-start;padding:12px 0;border-bottom:1px dashed #e2e8ee}
+.flux li:last-child{border-bottom:0}
+.flux li span.n{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-dark);font-weight:700;font-size:14px}
+.flux li b{display:block;font-size:16px}
+.flux li small{display:block;color:var(--muted);font-size:14.5px;line-height:1.5}
+.flux .poste{margin-top:14px;font-size:14px;font-weight:650;color:var(--green);display:flex;gap:8px;align-items:center}
+.flux .sorties{margin:10px 0 0;font-size:14px;line-height:1.5;color:var(--muted)}
+.liste{list-style:none;margin:0;padding:0;display:grid;gap:16px}
+.liste li{display:flex;gap:14px;align-items:flex-start}
+.liste li svg{color:var(--green);margin-top:3px}
+.liste b{display:block}
+.liste span{color:var(--muted);font-size:15.5px}
+
+.etapes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;counter-reset:e;margin-bottom:34px}
+.etape{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px}
+.etape .n{font-size:13px;font-weight:700;color:var(--accent-dark);letter-spacing:.06em;text-transform:uppercase;margin:0 0 10px}
+.etape h3{margin:0 0 8px;font-size:18px}
+.etape p{margin:0;color:var(--muted);font-size:15.5px}
+.prerequis{display:flex;flex-wrap:wrap;gap:10px 28px;color:var(--ink-2);font-size:15px;margin:0 0 30px;padding:0;list-style:none}
+.prerequis li{display:flex;gap:8px;align-items:center}
+.prerequis svg{width:18px;height:18px;color:var(--accent-dark)}
+.pilote{display:flex;gap:12px;align-items:flex-start;max-width:720px;margin:0 0 34px;padding:16px 18px;background:var(--accent-soft);border:1px solid #c9e3f3;border-left:4px solid var(--accent-dark);border-radius:10px;color:var(--ink);font-size:15.5px}
+.pilote p{margin:0}
+.pilote svg{color:var(--accent-dark);margin-top:2px}
+.renvoi{margin:-16px 0 30px;color:var(--muted);font-size:15px}
+
+.auteur{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,.8fr);gap:48px;align-items:start}
+.auteur p{color:var(--ink-2);margin:0 0 14px}
+.liens{display:grid;gap:10px}
+.liens a{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:14px 16px;text-decoration:none;color:var(--ink);font-weight:600;font-size:15.5px}
+.liens a:hover{border-color:#bcd8ea;background:#fbfdff}
+.liens a svg{width:17px;height:17px;color:var(--accent-dark)}
+
+footer{border-top:1px solid var(--line);padding:34px 0 44px;color:var(--muted);font-size:14px}
+footer .wrap{display:grid;gap:10px}
+footer p{margin:0}
+footer .pied{display:flex;flex-wrap:wrap;gap:6px 20px}
+footer .pied a{color:var(--accent-dark);font-weight:600}
+.mentions{display:grid;gap:8px;margin-top:8px;padding-top:16px;border-top:1px solid var(--line)}
+.mentions h2{font-size:16px;margin:0;color:var(--ink)}
+
+@media (max-width:960px){
+ html{scroll-padding-top:128px}
+ .hero .wrap,.prive,.auteur{grid-template-columns:1fr;gap:40px}
+ .cards,.etapes{grid-template-columns:repeat(2,minmax(0,1fr))}
+ /* La navigation passe sur une seconde ligne qui défile horizontalement (sans script) au lieu de disparaître */
+ .top .wrap{flex-wrap:wrap;height:auto;padding-top:10px;padding-bottom:4px;row-gap:2px}
+ .top nav{flex:1 0 100%;gap:20px;overflow-x:auto;white-space:nowrap;padding:6px 6px 8px;margin:0 -6px;scrollbar-width:thin}
+ .top nav a{flex:none}
+}
+/* Fenêtre basse (téléphone à l'horizontale, fort zoom) : l'en-tête ne colle plus, pour ne pas masquer le contenu */
+@media (max-height:500px){
+ header.top{position:static}
+ html{scroll-padding-top:0}
+}
+@media (max-width:600px){
+ body{font-size:16px}
+ .wrap{padding:0 16px}
+ .hero .wrap{padding-top:44px;padding-bottom:56px}
+ section{padding:60px 0}
+ .cards,.etapes{grid-template-columns:1fr}
+ .paper{padding:26px 20px 22px}
+ .cta .btn{width:100%}
+ .brand{font-size:19px}
+}
+</style>
+</head>
+<body>
+<svg style="display:none" aria-hidden="true">
+ <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 11.5c0 4-3.8 7-8.5 7-1.2 0-2.4-.2-3.4-.6L4 20l1.2-4C4.1 14.8 3.5 13.2 3.5 11.5c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/></symbol>
+ <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h4M9 12h6M9 16h6"/></symbol>
+ <symbol id="i-book" viewBox="0 0 24 24"><path d="M3 5.5c3.4-1 6.4-.7 9 1v13c-2.6-1.7-5.6-2-9-1v-13ZM21 5.5c-3.4-1-6.4-.7-9 1v13c2.6-1.7 5.6-2 9-1v-13Z"/></symbol>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol>
+ <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5h6l2 2h10v9.8A1.7 1.7 0 0 1 19.3 20H4.7A1.7 1.7 0 0 1 3 18.3V6.5Z"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+ <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+ <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.8 5.4L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.6L12 3ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></symbol>
+ <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/></symbol>
+ <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></symbol>
+ <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.1 8.2 7.5 9.5 4.4-1.3 7.5-4.9 7.5-9.5V6L12 3Z"/><path d="m9 12 2 2 4-4"/></symbol>
+ <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 20h14"/></symbol>
+ <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+ <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="1.8"/><path d="M8.5 20h7M12 16.5V20"/></symbol>
+ <symbol id="i-chip" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9.5 2.5V6M14.5 2.5V6M9.5 18v3.5M14.5 18v3.5M2.5 9.5H6M2.5 14.5H6M18 9.5h3.5M18 14.5h3.5"/></symbol>
+ <symbol id="i-disk" viewBox="0 0 24 24"><ellipse cx="12" cy="6.5" rx="7.5" ry="3"/><path d="M4.5 6.5v11c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-11M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3"/></symbol>
+ <symbol id="i-github" viewBox="0 0 24 24"><path d="M9 19c-4 1.3-4-2-5.6-2.5M14.6 21v-3.1a2.7 2.7 0 0 0-.8-2.1c2.6-.3 5.4-1.3 5.4-5.8a4.5 4.5 0 0 0-1.2-3.1 4.2 4.2 0 0 0-.1-3.1s-1-.3-3.3 1.2a11.3 11.3 0 0 0-6 0C6.3 3.5 5.3 3.8 5.3 3.8a4.2 4.2 0 0 0-.1 3.1A4.5 4.5 0 0 0 4 10c0 4.5 2.7 5.5 5.3 5.8a2.7 2.7 0 0 0-.8 2.1V21"/></symbol>
+</svg>
+
+<a class="skip" href="#contenu">Aller au contenu</a>
+
+<header class="top">
+ <div class="wrap">
+  <a class="brand" href="#" aria-label="TerritorIA, accueil"><span class="brand-mark logo"><img src="logo-tete.png" alt="" width="36" height="36"></span><span>Territor<b>IA</b></span></a>
+  <nav aria-label="Navigation principale">
+   <a href="#fonctions">Fonctionnalités</a>
+   <a href="#confidentialite">Confidentialité</a>
+   <a href="#installer">Installer</a>
+   <a href="#auteur">Licence</a>
+   <a class="btn btn-ghost" href="https://github.com/didou92i/territoria"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-github"/></svg>Code source sur GitHub</a>
+  </nav>
+ </div>
+</header>
+
+<main id="contenu">
+ <div class="hero">
+  <div class="wrap">
+   <div>
+    <p class="eyebrow"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-lock"/></svg>Logiciel libre pour les collectivités</p>
+    <h1>Vos actes rédigés avec l'IA. Par défaut, vos données ne quittent pas la mairie.</h1>
+    <p class="lead">Arrêtés, délibérations, séances du conseil, questions sur vos documents : TerritorIA travaille avec les agents, sur le poste de la collectivité. L'intelligence artificielle tourne sur la machine : par défaut, rien ne sort du poste en fonctionnement.</p>
+    <div class="cta">
+     <a class="btn btn-primary" href="https://github.com/didou92i/territoria/blob/main/docs/guide-debutant.md"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg>Installer TerritorIA, pas à pas</a>
+     <a class="btn btn-ghost" href="#installer"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-down"/></svg>Voir les prérequis</a>
+    </div>
+    <p class="fine"><a href="https://demo.territoria.ovh" rel="noopener">Essayer la démonstration en ligne</a> : IA en ligne et données fictives seulement, sans rien installer. N'y entrez aucune donnée réelle.</p>
+    <p class="fine">Gratuit · Licence EUPL 1.2 · Version pilote 0.2 · Windows 10 et 11, macOS (Linux : scripts fournis, sans guide pas à pas)</p>
+   </div>
+   <figure class="paper" aria-label="Exemple d'arrêté rédigé avec TerritorIA, pour une commune fictive">
+    <span class="tag"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg>Visas issus de Légifrance</span>
+    <div class="entete"><span>Commune de Démoville (exemple fictif)</span><span>Arrêté n° 2026-042</span></div>
+    <p class="titre-acte"><strong>ARRÊTÉ MUNICIPAL</strong></p>
+    <p class="objet">portant réglementation temporaire du stationnement rue des Essais</p>
+    <p class="vu">Vu le code général des collectivités territoriales, notamment ses articles <mark>L2212-1</mark>, <mark>L2212-2</mark> et <mark>L2213-1</mark> ;</p>
+    <p class="vu">Vu le code de la route ;</p>
+    <p class="vu">Considérant qu'un déménagement nécessite de réserver le stationnement devant le n° 12 ;</p>
+    <p class="arrete">ARRÊTE</p>
+    <p><b>Article 1er</b> — Le stationnement est interdit rue des Essais, au droit du n° 12, le 14 novembre 2026 de 8 h à 18 h…</p>
+    <p class="fin">Projet prêt à relire, puis exporté en Word au papier à en-tête de la commune.</p>
+   </figure>
+  </div>
+ </div>
+
+ <section id="fonctions">
+  <div class="wrap">
+   <div class="head">
+    <p class="kicker">Ce que fait TerritorIA</p>
+    <h2 class="titre">Les écrits de la collectivité, du projet au document signé</h2>
+    <p>Pensé pour les secrétaires de mairie, les agents administratifs et les élus : chaque texte est rédigé à partir de vos données et des textes en vigueur, puis relu par vous.</p>
+   </div>
+   <div class="cards">
+    <article class="card"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-file"/></svg></span><h3>Arrêtés et délibérations</h3><p>Police temporaire, stationnement, débits de boissons, RH, délégations, marchés : visas à jour, numérotation, registre des actes, export Word au papier à en-tête.</p></article>
+    <article class="card"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-mic"/></svg></span><h3>Séances du conseil</h3><p>Transcription de l'enregistrement sur le poste, avec les intervenants, puis compte rendu, procès-verbal (article L2121-15 du CGCT) et liste des délibérations.</p></article>
+    <article class="card"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-search"/></svg></span><h3>Questions sur vos documents</h3><p>Posez une question, obtenez une réponse sourcée. Les PDF scannés sont lus, et la recherche retrouve un texte par son sens, pas seulement par ses mots.</p></article>
+    <article class="card"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-spark"/></svg></span><h3>22 assistants métiers</h3><p>Réponse à un courrier, compte rendu de réunion, notes : des assistants fournis, et les vôtres en quelques minutes.</p></article>
+    <article class="card"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-book"/></svg></span><h3>Légifrance intégré</h3><p>Les visas et articles cités viennent de Légifrance, avec leur date, une fois le compte PISTE de la collectivité branché. En mode hors ligne, les textes déjà connus restent utilisables, et l'acte le signale.</p></article>
+    <article class="card"><span class="ic"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-folder"/></svg></span><h3>Espaces et droits</h3><p>Un espace de documents par service, des comptes et des rôles (administrateur, référent juridique, agent, lecteur), retours des agents.</p></article>
+   </div>
+  </div>
+ </section>
+
+ <section id="confidentialite" class="alt">
+  <div class="wrap prive">
+   <div>
+    <div class="head">
+     <p class="kicker">Confidentialité</p>
+     <h2 class="titre">100 % local par défaut</h2>
+     <p>Les agents traitent des données personnelles et confidentielles. TerritorIA est donc conçu pour que, par défaut, rien ne sorte du poste en fonctionnement.</p>
+    </div>
+    <div class="flux">
+     <ol>
+      <li><span class="n">1</span><div><b>Le navigateur de l'agent</b><small>L'interface n'est ouverte que sur le poste lui-même.</small></div></li>
+      <li><span class="n">2</span><div><b>TerritorIA et ses automatisations</b><small>Dans des conteneurs isolés ; les automatisations n'ont aucun accès à Internet.</small></div></li>
+      <li><span class="n">3</span><div><b>L'IA, sur la machine</b><small>Un modèle ouvert, servi par LM Studio sur le poste.</small></div></li>
+     </ol>
+     <p class="poste"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg>Par défaut, rien ne sort du poste en fonctionnement.</p>
+     <p class="sorties">Deux connecteurs publics sont facultatifs et ne fonctionnent que si l'installation les autorise (étape 4 de l'installation) : Légifrance (les références d'articles demandées) et data.gouv.fr (les mots de la recherche, puis le téléchargement du fichier choisi, parfois chez un autre hébergeur). Jamais un document, une conversation ou un nom d'agent. L'installation et les mises à jour téléchargent aussi des logiciels et des modèles depuis Internet, sans aucune donnée de la collectivité.</p>
+    </div>
+   </div>
+   <ul class="liste">
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><b>Aucune donnée envoyée à une IA en ligne, par défaut</b><span>Questions, documents et projets d'actes ne sont envoyés à aucun service d'IA sur Internet : l'IA tourne sur le poste, ou sur un serveur du réseau interne si la collectivité le choisit. Seule exception, si la collectivité la choisit à l'installation, après un avertissement : l'API de Mistral à la place de l'IA locale. Partent alors chez Mistral les questions des agents, les extraits des documents importés, les données saisies pour les actes avec les projets rédigés, et les passages de transcription des séances. Le son des séances, les comptes et les sauvegardes ne partent jamais.</span></div></li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><b>Transcription sans réseau</b><span>L'enregistrement des séances est transcrit sur place, puis l'audio est effacé dès la transcription validée.</span></div></li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><b>Sauvegardes chiffrées</b><span>Faites par le poste, chaque jour si vous le souhaitez, avec un mot de passe que l'application ne connaît pas. En sauvegarde automatique, ce mot de passe est conservé sur le poste, hors de l'application.</span></div></li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><b>Comptes, rôles et droits par espace</b><span>Chacun ne voit que ce qui le concerne.</span></div></li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-check"/></svg><div><b>Code ouvert et vérifiable</b><span>Tout le code est publié : votre DSI ou votre délégué à la protection des données peut le relire.</span></div></li>
+   </ul>
+  </div>
+ </section>
+
+ <section id="installer">
+  <div class="wrap">
+   <div class="head">
+    <p class="kicker">Installer</p>
+    <h2 class="titre">Une à deux heures, même sans connaissances techniques</h2>
+    <p>Le guide pour débutant explique chaque étape en français simple, pour Windows et Mac. Un assistant IA de programmation peut aussi vous accompagner : il vous demande votre accord à chaque étape, et vous saisissez vous-même mots de passe et identifiants.</p>
+   </div>
+   <div class="pilote" role="note"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-shield"/></svg><p><b>Version pilote 0.1 :</b> un poste, mode solo. Demandez l'avis de votre délégué à la protection des données (DPO) avant de traiter des données réelles.</p></div>
+   <div class="etapes">
+    <div class="etape"><p class="n">Partie 3 du guide</p><h3>Récupérer</h3><p>Installez git, puis récupérez TerritorIA avec la commande <code>git clone</code> donnée par le guide. Pas de fichier ZIP : git sert aussi aux mises à jour.</p></div>
+    <div class="etape"><p class="n">Partie 4 du guide</p><h3>Installer</h3><p>Lancez une à une les 11 étapes du guide (de 0 à 10) : moteur de conteneurs, IA locale, automatisations… Chacune se termine par « ETAPE … : OK ».</p></div>
+    <div class="etape"><p class="n">Partie 6 du guide</p><h3>Paramétrer</h3><p>Nom de la collectivité, papier à en-tête, comptes des agents : tout se règle dans l'application. Pour Légifrance, il faut un compte PISTE gratuit, créé au nom de la collectivité sur piste.gouv.fr ; le guide indique où saisir ses identifiants.</p></div>
+   </div>
+   <ul class="prerequis" aria-label="Ce qu'il faut">
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-monitor"/></svg>Windows 10 ou 11, ou un Mac (Linux : scripts fournis, sans guide pas à pas)</li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-chip"/></svg>16 Go de mémoire conseillés (8 Go avec un modèle plus petit)</li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-disk"/></svg>30 Go de place libre sur le disque</li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-clock"/></svg>Droits d'administrateur et Internet pour l'installation (modèle d'IA de 5 à 17 Go)</li>
+    <li><svg class="i" aria-hidden="true" focusable="false"><use href="#i-down"/></svg>Sous Windows, winget et WSL 2 ; sur Mac, Homebrew pour installer Podman et LM Studio s'ils manquent</li>
+   </ul>
+   <p class="renvoi">Le détail des prérequis (git, chiffrement du disque conseillé, conditions de LM Studio à accepter par la collectivité) est dans le guide.</p>
+   <div class="cta">
+    <a class="btn btn-primary" href="https://github.com/didou92i/territoria/blob/main/docs/guide-debutant.md"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-book"/></svg>Lire le guide pour débutant</a>
+    <a class="btn btn-ghost" href="https://github.com/didou92i/territoria"><svg class="i" aria-hidden="true" focusable="false"><use href="#i-github"/></svg>Code source sur GitHub</a>
+   </div>
+  </div>
+ </section>
+
+ <section id="auteur" class="alt">
+  <div class="wrap auteur">
+   <div>
+    <img class="signature" src="logo-territoria.png" alt="TerritorIA — Intelligence artificielle, conseil et digital" width="194" height="192">
+    <p class="kicker">Licence et auteur</p>
+    <h2 class="titre">Libre, gratuit, et traçable</h2>
+    <p>TerritorIA est distribué sous la <b>licence publique de l'Union européenne (EUPL 1.2)</b>. Son utilisation est libre et gratuite, y compris par les collectivités. Toute copie, modification ou mise en ligne doit conserver les mentions d'auteur ; une version modifiée doit rester sous l'EUPL 1.2 ou une licence compatible listée par l'EUPL. n8n, LM Studio, le moteur de conteneurs et les modèles d'IA, installés à part, gardent leurs propres conditions (voir NOTICE.md).</p>
+    <p>Créé par <b>Rhiad AZZABI</b>, entrepreneur individuel, nom commercial TerritorIA (SIREN 989 227 731). « TerritorIA » est le nom commercial de l'entreprise : une version modifiée ne doit pas se présenter comme la version d'origine.</p>
+   </div>
+   <div class="liens">
+    <a href="https://github.com/didou92i/territoria/blob/main/LICENSE">Texte de la licence EUPL 1.2<svg class="i" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+    <a href="https://github.com/didou92i/territoria/blob/main/NOTICE.md">Mentions d'auteur et composants tiers<svg class="i" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+    <a href="https://github.com/didou92i/territoria/blob/main/SECURITY.md">Signaler une faille de sécurité<svg class="i" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+    <a href="https://github.com/didou92i/territoria">Code source sur GitHub<svg class="i" aria-hidden="true" focusable="false"><use href="#i-arrow"/></svg></a>
+   </div>
+  </div>
+ </section>
+</main>
+
+<footer>
+ <div class="wrap">
+  <nav class="pied" aria-label="Liens du pied de page">
+   <a href="#mentions">Mentions légales</a>
+   <a href="#auteur">Licence</a>
+  </nav>
+  <p>© 2026 Rhiad AZZABI — TerritorIA. Logiciel distribué sous licence EUPL 1.2.</p>
+  <div class="mentions" id="mentions">
+   <h2>Mentions légales</h2>
+   <p><b>Éditeur et directeur de la publication :</b> Rhiad AZZABI, entrepreneur individuel, nom commercial TerritorIA, SIREN 989 227 731, 60 rue François 1er, 75008 Paris. Contact : <a href="https://tally.so/r/Ge9Ko2" rel="noopener">formulaire de contact</a>.</p>
+   <p><b>Hébergeur :</b> GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis. GitHub ne publie pas de numéro de téléphone ; contact : <a href="https://support.github.com/contact">support.github.com/contact</a>.</p>
+   <p><b>Vos données de visite :</b> la page est servie par GitHub Pages ; GitHub, Inc. (États-Unis) reçoit donc l'adresse IP de chaque visiteur. Ce site n'utilise ni cookie ni outil de mesure d'audience, et ne charge rien depuis un autre site. Le formulaire de contact est hébergé par le service Tally (tally.so) : ce que vous y écrivez lui est transmis.</p>
+   <p><b>Signaler un problème d'accessibilité ou de sécurité :</b> utilisez le <a href="https://tally.so/r/Ge9Ko2" rel="noopener">formulaire de contact</a>.</p>
+  </div>
+ </div>
+</footer>
+</body>
+</html>
