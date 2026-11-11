@@ -1,0 +1,96 @@
+{
+ "version": 1,
+ "_note": "Empreintes et tailles relevées au banc d'essai (tâche 4 du plan du lot 1), à partir d'adresses figées sur une révision précise ; un fichier sans empreinte n'est jamais téléchargé.",
+ "modeles": {
+  "large-v3-turbo": {
+   "licence": "MIT",
+   "source": "Conversion CTranslate2 de openai/whisper-large-v3-turbo",
+   "fichiers": [
+    {
+     "chemin": "large-v3-turbo/config.json",
+     "url": "https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/config.json",
+     "taille": 2263,
+     "sha256": "b0253ea6c0d3bea6b1e19e91a02acfd3b53f4467362efcb5a3e6b16c9b3a9b7e"
+    },
+    {
+     "chemin": "large-v3-turbo/model.bin",
+     "url": "https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/model.bin",
+     "taille": 1617884929,
+     "sha256": "e76620f83d5f5b69efd3d87e3dc180c1bd21df9fbebacfd4335e5e1efcc018da"
+    },
+    {
+     "chemin": "large-v3-turbo/preprocessor_config.json",
+     "url": "https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/preprocessor_config.json",
+     "taille": 340,
+     "sha256": "7ccc62c6f2765af1f3b46c00c9b5894426835a05021c8b9c01eecb6dfb542711"
+    },
+    {
+     "chemin": "large-v3-turbo/tokenizer.json",
+     "url": "https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/tokenizer.json",
+     "taille": 2710337,
+     "sha256": "297b13372ac43916285644fb9687add3cc62ee2a1adb60da3dc25cc94c1871fd"
+    },
+    {
+     "chemin": "large-v3-turbo/vocabulary.json",
+     "url": "https://huggingface.co/dropbox-dash/faster-whisper-large-v3-turbo/resolve/0a363e9161cbc7ed1431c9597a8ceaf0c4f78fcf/vocabulary.json",
+     "taille": 1068114,
+     "sha256": "c69260f2ab26d659b7c398f9a2b2b48ed0df16c3b47d7326782fd9cba71690c1"
+    }
+   ]
+  },
+  "medium": {
+   "licence": "MIT",
+   "source": "Conversion CTranslate2 de openai/whisper-medium",
+   "fichiers": [
+    {
+     "chemin": "medium/config.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/config.json",
+     "taille": 2257,
+     "sha256": null
+    },
+    {
+     "chemin": "medium/model.bin",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/model.bin",
+     "taille": 1527906378,
+     "sha256": "9b45e1009dcc4ab601eff815b61d80e60ce3fd8c74c1a14f4a282258286b51ae"
+    },
+    {
+     "chemin": "medium/tokenizer.json",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/tokenizer.json",
+     "taille": 2203239,
+     "sha256": null
+    },
+    {
+     "chemin": "medium/vocabulary.txt",
+     "url": "https://huggingface.co/Systran/faster-whisper-medium/resolve/08e178d48790749d25932bbc082711ddcfdfbc4f/vocabulary.txt",
+     "taille": 459861,
+     "sha256": null
+    }
+   ]
+  },
+  "segmentation": {
+   "licence": "MIT",
+   "source": "pyannote/segmentation-3.0, export ONNX de sherpa-onnx",
+   "fichiers": [
+    {
+     "chemin": "segmentation/model.onnx",
+     "url": "https://huggingface.co/csukuangfj/sherpa-onnx-pyannote-segmentation-3-0/resolve/9403a6902bb58e3d5ae8c7e77c3422de279db2e0/model.onnx",
+     "taille": 5992913,
+     "sha256": "220ad67ca923bef2fa91f2390c786097bf305bceb5e261d4af67b38e938e1079"
+    }
+   ]
+  },
+  "empreintes": {
+   "licence": "Apache-2.0",
+   "source": "3D-Speaker ERes2Net, export ONNX de sherpa-onnx",
+   "fichiers": [
+    {
+     "chemin": "empreintes/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
+     "url": "https://github.com/k2-fsa/sherpa-onnx/releases/download/speaker-recongition-models/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx",
+     "taille": 39593761,
+     "sha256": "1a331345f04805badbb495c775a6ddffcdd1a732567d5ec8b3d5749e3c7a5e4b"
+    }
+   ]
+  }
+ }
+}

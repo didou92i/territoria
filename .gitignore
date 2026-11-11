@@ -1,0 +1,34 @@
+.venv/
+__pycache__/
+*.pyc
+app/frontend/node_modules/
+app/frontend/.response-test.cjs
+app/public/21st-components.js
+territoria-donnees/
+# Secrets, réglages locaux, bases et journaux : jamais dans le dépôt, même posés là par erreur.
+.env
+*.env
+secrets/
+*.pem
+*.key
+*.sqlite
+*.sqlite3
+*.db
+*.tsv1
+*.log
+# Fichiers que le système crée tout seul dans un dossier ouvert (Finder, Explorateur, partages) : ils ne doivent pas
+# bloquer install/mettre-a-jour.sh, qui refuse de démarrer sur un dépôt modifié.
+.DS_Store
+._*
+Thumbs.db
+desktop.ini
+# État des éditeurs et des assistants IA créé dans le dossier ouvert : il ne doit pas bloquer install/mettre-a-jour.sh,
+# qui refuse de démarrer sur un dépôt modifié. Seuls ces dossiers d'état sont ignorés : un fichier du dépôt qui guide un
+# assistant (AGENTS.md, CLAUDE.md, .github/copilot-instructions.md) reste suivi.
+.claude/
+.codex/
+.cursor/
+.vscode/
+.idea/
+.continue/
+.aider*

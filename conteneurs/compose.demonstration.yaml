@@ -1,0 +1,37 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Serveur de démonstration (VPS Linux, docs/demonstration.md), ajouté par install/commun.sh quand secrets/compose.env
+# contient TERRITORIA_DEMONSTRATION=1. TerritorIA reste en mode « un poste » : son port n'est publié que sur 127.0.0.1 ;
+# Caddy publie 80 et 443 avec un certificat Let's Encrypt pour TERRITORIA_DOMAINE. L'accès est réservé aux comptes, et
+# OpenRouter est permis (app/llm_backend.py) : données fictives seulement.
+services:
+  territoria:
+    environment:
+      - TERRITORIA_ORIGINE=https://${TERRITORIA_DOMAINE:?TERRITORIA_DOMAINE doit désigner le nom de domaine de la démonstration}
+      - TERRITORIA_DEMONSTRATION=1
+
+  proxy:
+    # Même image épinglée que la variante équipe (compose.equipe.yaml).
+    image: caddy:2.11.7@sha256:36c24ad91a7ff7bc4c87fe22bfa8df3c4b18da0773d73fc12ee2c52b98c0bb7e
+    # Sans droits root, racine en lecture seule : seul /data (certificats Let's Encrypt) est en écriture. Le dossier
+    # caddy/ des données appartient à l'uid 10002 (install/commun.sh, preparer_dossiers).
+    user: "10002:10002"
+    read_only: true
+    tmpfs:
+      - /config:uid=10002,gid=10002,mode=0700
+    environment:
+      - TERRITORIA_DOMAINE=${TERRITORIA_DOMAINE:?TERRITORIA_DOMAINE doit désigner le nom de domaine de la démonstration}
+    # 80 : défi HTTP de Let's Encrypt et redirection vers HTTPS ; 443 : l'application.
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile.demonstration:/etc/caddy/Caddyfile:ro
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/caddy:/data
+    depends_on:
+      territoria:
+        condition: service_healthy
+    # Réseau `sortie`, partagé avec TerritorIA ; jamais `interne` : le proxy ne voit pas n8n.
+    networks:
+      - sortie
+    restart: unless-stopped

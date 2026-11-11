@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Serveur de démonstration : HTTPS par Let's Encrypt pour le nom de domaine de compose.env, relayé vers TerritorIA.
+{$TERRITORIA_DOMAINE} {
+	encode gzip
+	reverse_proxy territoria:8878
+}

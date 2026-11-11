@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Variante équipe, à ajouter à compose.yaml : `docker compose -f compose.yaml -f compose.equipe.yaml ...`.
+# Territoria refuse de démarrer dans ce mode tant que le sous-projet 2 n'est pas livré ; le proxy est prêt pour ce jour-là.
+services:
+  territoria:
+    environment:
+      - TERRITORIA_MODE=equipe
+
+  proxy:
+    image: caddy:2.11.7@sha256:36c24ad91a7ff7bc4c87fe22bfa8df3c4b18da0773d73fc12ee2c52b98c0bb7e
+    # Sans droits root, racine en lecture seule : seul /data (autorité de certification interne) est en écriture.
+    # Le dossier caddy/ des données doit appartenir à l'uid 10002. Écouter sur 443 sans être root est permis par Docker
+    # (net.ipv4.ip_unprivileged_port_start=0 dans l'espace de noms réseau du conteneur).
+    user: "10002:10002"
+    read_only: true
+    # /config est à root dans l'image : sans uid/gid explicites, le tmpfs hérite de ce propriétaire et Caddy ne peut
+    # pas y enregistrer sa configuration.
+    tmpfs:
+      - /config:uid=10002,gid=10002,mode=0700
+    ports:
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      # Conserve l'autorité de certification interne d'un démarrage à l'autre (sinon chaque poste doit la réapprouver).
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/caddy:/data
+    # Le proxy n'écoute qu'une fois Territoria en bonne santé : le verrou du mode équipe fait sortir Territoria, donc
+    # aucun point d'entrée TLS n'est ouvert sur le réseau tant que le mode est verrouillé.
+    depends_on:
+      territoria:
+        condition: service_healthy
+    # Réseau `sortie`, celui de Territoria qui n'est pas `internal` : Docker ne publie le port 443 que par un tel réseau,
+    # et le proxy y joint Territoria sans jamais voir n8n (réservé au réseau `interne`, sans sortie).
+    networks:
+      - sortie

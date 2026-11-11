@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Proxy TLS de la variante équipe : certificats émis par l'autorité interne de Caddy, aucun appel à une autorité publique.
+# `on_demand` est nécessaire tant qu'aucun nom d'hôte n'est fixé : sans lui, la connexion par adresse IP n'obtient aucun
+# certificat. Le sous-projet 2 remplacera `:443` par le nom d'hôte de la collectivité.
+{
+	auto_https disable_redirects
+	# Inutile et impossible dans le conteneur (racine en lecture seule) : installer l'autorité interne dans son magasin de confiance.
+	skip_install_trust
+}
+
+:443 {
+	tls internal {
+		on_demand
+	}
+	reverse_proxy territoria:8878
+}

@@ -1,0 +1,65 @@
+{
+ "texte": "Le conseil municipal ne délibère valablement que lorsque la majorité de ses membres en exercice est présente. Si, après une première convocation régulièrement faite selon les dispositions des articles L. Un conseiller municipal empêché d'assister à une séance peut donner à un collègue de son choix pouvoir écrit de voter en son nom. Un même conseiller municipal ne peut être porteur que d'un seul pouvoir. Sauf cas de maladie dûment constatée ou de congé de maternité dans les conditions prévues à l'article L. Les délibérations sont prises à la majorité absolue des suffrages exprimés. Lorsqu'il y a partage égal des voix et sauf cas de scrutin secret, la voix du président est prépondérante. Les délibérations sont inscrites par ordre de date sur un registre tenu dans des conditions définies par décret en Conseil d'Etat. Elles sont signées par le maire et le ou les secrétaires de séance. Le conseil municipal règle par ses délibérations les affaires de la commune. Il donne son avis toutes les fois que cet avis est requis par les lois et règlements, ou qu'il est demandé par le représentant de l'Etat dans le département. Lorsque le conseil municipal, à ce régulièrement requis et convoqué, refuse ou néglige de donner avis, il peut être passé outre.",
+ "tours": [
+  {
+   "debut": 0.0,
+   "fin": 5.91,
+   "groupe": 0
+  },
+  {
+   "debut": 6.41,
+   "fin": 11.83,
+   "groupe": 1
+  },
+  {
+   "debut": 12.33,
+   "fin": 19.06,
+   "groupe": 2
+  },
+  {
+   "debut": 19.56,
+   "fin": 23.5,
+   "groupe": 0
+  },
+  {
+   "debut": 24.0,
+   "fin": 29.44,
+   "groupe": 1
+  },
+  {
+   "debut": 29.94,
+   "fin": 34.21,
+   "groupe": 2
+  },
+  {
+   "debut": 34.71,
+   "fin": 40.46,
+   "groupe": 0
+  },
+  {
+   "debut": 40.96,
+   "fin": 47.73,
+   "groupe": 1
+  },
+  {
+   "debut": 48.23,
+   "fin": 51.47,
+   "groupe": 2
+  },
+  {
+   "debut": 51.97,
+   "fin": 56.24,
+   "groupe": 0
+  },
+  {
+   "debut": 56.74,
+   "fin": 64.21,
+   "groupe": 1
+  },
+  {
+   "debut": 64.71,
+   "fin": 72.05,
+   "groupe": 2
+  }
+ ]
+}

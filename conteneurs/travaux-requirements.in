@@ -1,0 +1,6 @@
+# Dépendances de l'image du conteneur de transcription (conteneurs/travaux.Dockerfile).
+# Verrou avec empreintes : conteneurs/travaux-requirements.lock, généré par pip-compile --generate-hashes
+# dans l'image Python de base (Linux), jamais sur le poste.
+faster-whisper
+sherpa-onnx
+numpy

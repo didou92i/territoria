@@ -1,0 +1,132 @@
+{
+  "id": "TerritoriaConv01",
+  "name": "Territoria — conversation",
+  "nodes": [
+    {
+      "id": "38bdd657-f6ea-4370-8cd0-5cde7fedb0e1",
+      "name": "Entrée locale",
+      "webhookId": "5d0f7a52-9c8e-4b6a-8f3b-6a1e0c2b7d41",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "territoria-conversation",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaWebh01",
+          "name": "Territoria — entrée privée"
+        }
+      }
+    },
+    {
+      "id": "38bdd657-f6ea-4370-8cd0-5cde7fedb0e2",
+      "name": "Modèle local LM Studio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/llm/chat",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({request: $json.request, provider: $json.provider}) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "38bdd657-f6ea-4370-8cd0-5cde7fedb0e3",
+      "name": "Vérification automatique des sources",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/verify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "chat-arrete-routing-note",
+      "name": "Questions et rédaction d’arrêtés",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -240
+      ],
+      "parameters": {
+        "width": 730,
+        "height": 190,
+        "content": "## Un seul chatbot, deux parcours locaux\nLes questions documentaires passent par les nœuds ci-dessous.\n\nUne demande de rédaction d’arrêté est orientée par le serveur local vers le workflow « Territoria — rédaction d’arrêtés » : modèles locaux, textes officiels, serveur IA local, articles complets, logo utilisateur et Word dans la conversation.\n\nLes demandes de modification réutilisent le contexte du projet."
+      }
+    }
+  ],
+  "connections": {
+    "Entrée locale": {
+      "main": [
+        [
+          {
+            "node": "Vérification automatique des sources",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vérification automatique des sources": {
+      "main": [
+        [
+          {
+            "node": "Modèle local LM Studio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionOrder": "v1"
+  }
+}

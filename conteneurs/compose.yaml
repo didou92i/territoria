@@ -1,0 +1,153 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Territoria en mode solo : l'interface n'est publiée que sur 127.0.0.1, n8n n'est publié nulle part et n'a aucune sortie
+# vers Internet (réseau `interne`, internal: true).
+# Les scripts d'installation exportent TERRITORIA_DONNEES_HOTE (chemin absolu du dossier territoria-donnees,
+# placé à côté du dépôt) ; tout chemin de données part de cette variable.
+name: territoria
+
+services:
+  territoria:
+    build:
+      context: ..
+      dockerfile: conteneurs/territoria.Dockerfile
+    env_file: ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/secrets/territoria.env
+    environment:
+      - TERRITORIA_ORIGINE=http://127.0.0.1:${TERRITORIA_PORT:-8878}
+      # Réglages de l'IA locale : ils viennent de compose.env, passé avec `--env-file` par les scripts, jamais de
+      # secrets/territoria.env (une entrée `environment` l'emporte sur env_file). Vide = valeur par défaut de l'application.
+      - TERRITORIA_LLM_URL=${TERRITORIA_LLM_URL:-}
+      - TERRITORIA_MODELE=${TERRITORIA_MODELE:-}
+      - TERRITORIA_HORS_LIGNE=${TERRITORIA_HORS_LIGNE:-0}
+      # Serveur de démonstration seulement (install/demonstration.sh) : 0 partout ailleurs.
+      - TERRITORIA_DEMONSTRATION=${TERRITORIA_DEMONSTRATION:-0}
+      # IA en ligne choisie à l'installation (étape mistral) : vide = IA locale. La clé arrive par secrets/territoria.env.
+      - TERRITORIA_IA_EN_LIGNE=${TERRITORIA_IA_EN_LIGNE:-}
+      # Modèle de transcription inscrit dans les demandes : même variable que le conteneur de travaux.
+      - TERRITORIA_TRANSCRIPTION_MODELE=${TERRITORIA_TRANSCRIPTION_MODELE:-}
+      # Aucun appel interne par un proxy : Podman copie par défaut les variables de proxy de la machine dans les conteneurs
+      # (Docker, celles de sa configuration). L'application contourne déjà tout proxy pour n8n et le serveur IA ; ces
+      # variables protègent aussi les autres programmes du conteneur (contrôle de santé). Le pont Légifrance, lui, peut
+      # passer par le proxy de la collectivité : il ne transmet que des références publiques.
+      - NO_PROXY=n8n,territoria,faux-llm,host.docker.internal,host.containers.internal,localhost,127.0.0.1
+      - no_proxy=n8n,territoria,faux-llm,host.docker.internal,host.containers.internal,localhost,127.0.0.1
+    ports:
+      - 127.0.0.1:${TERRITORIA_PORT:-8878}:8878
+    volumes:
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/territoria:/donnees
+    read_only: true
+    # Un tmpfs sans mode explicite n'est en 1777 qu'au premier démarrage : au redémarrage du même conteneur (stop puis
+    # start, `up -d` après un arrêt, redémarrage de Docker) il reprend le 0755 root du point de montage et l'écriture
+    # est refusée à l'utilisateur 10001. D'où le mode explicite sur chaque tmpfs.
+    tmpfs:
+      - /tmp:mode=1777
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    depends_on:
+      - n8n
+    # interne : n8n seulement, sans sortie vers Internet ; sortie : Légifrance, LM Studio sur la machine (host-gateway) et
+    # le port publié sur 127.0.0.1 (Docker ne publie un port que par un réseau qui n'est pas `internal`).
+    networks:
+      - interne
+      - sortie
+
+  n8n:
+    image: docker.n8n.io/n8nio/n8n:2.45.5@sha256:9f6d0a5987ab5a297c4b0b38fbf1a22285dd1364551478e93f03d506908fa74c
+    env_file: ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/secrets/n8n.env
+    environment:
+      - TZ=Europe/Paris
+      - GENERIC_TIMEZONE=Europe/Paris
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_DIAGNOSTICS_ENABLED=false
+      - N8N_VERSION_NOTIFICATIONS_ENABLED=false
+      - N8N_TEMPLATES_ENABLED=false
+      - N8N_PERSONALIZATION_ENABLED=false
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=none
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=none
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=false
+      # Avec « none », n8n 2.x ne supprime pas l'exécution tout de suite : il la marque supprimée et la détruit au passage
+      # suivant de son nettoyage (par défaut 1 h plus tard, toutes les 15 min), ce qui laisse la question reçue par le
+      # webhook dans database.sqlite (table execution_data). Sans délai de grâce et avec un passage par minute, elle disparaît
+      # en moins de deux minutes (vérifié à l'essai).
+      - EXECUTIONS_DATA_HARD_DELETE_BUFFER=0
+      - EXECUTIONS_DATA_PRUNE_HARD_DELETE_INTERVAL=1
+      # Une exécution interrompue (n8n arrêté pendant une demande : statut « crashed ») n'est pas concernée par « none » :
+      # elle garderait la question reçue 336 h (défaut de n8n), donc dans les sauvegardes. Âge maximal : 1 h ; le passage
+      # de nettoyage (toutes les 60 min) puis la destruction définitive l'effacent en moins de deux heures.
+      - EXECUTIONS_DATA_MAX_AGE=1
+      # Les nœuds HTTP de n8n ne rappellent Territoria qu'en direct, jamais par un proxy (voir le service territoria).
+      - NO_PROXY=n8n,territoria,faux-llm,host.docker.internal,host.containers.internal,localhost,127.0.0.1
+      - no_proxy=n8n,territoria,faux-llm,host.docker.internal,host.containers.internal,localhost,127.0.0.1
+    volumes:
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/n8n:/home/node/.n8n
+    read_only: true
+    # Chemins en écriture en dehors de /home/node/.n8n, relevés à l'essai avec n8n 2.45.5 (système de fichiers en
+    # lecture seule) : /tmp ; /home/node/.cache, où n8n compile ses ressources statiques au démarrage (sans lui :
+    # « ENOENT: mkdir '/home/node/.cache' » et le conteneur s'arrête). Modes explicites : voir le service territoria
+    # (sans eux, un redémarrage du conteneur n8n s'arrête sur « EACCES: mkdir '/home/node/.cache/n8n' »).
+    tmpfs:
+      - /tmp:mode=1777
+      - /home/node/.cache:uid=1000,gid=1000,mode=0700
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:5678/healthz/readiness"]
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    # Seulement le réseau interne : n8n ne joint que Territoria, jamais Internet ni la machine.
+    networks:
+      - interne
+
+  # Transcription des séances : conversion, transcription et séparation des voix. Aucun réseau (aucune donnée ne peut
+  # sortir) ; ne voit que le dossier audio des séances et les modèles (en lecture seule), jamais la base ni les documents.
+  # Même utilisateur que Territoria (10001) : les deux écrivent dans le dossier audio.
+  travaux:
+    build:
+      context: ..
+      dockerfile: conteneurs/travaux.Dockerfile
+    environment:
+      - TERRITORIA_TRANSCRIPTION_MODELE=${TERRITORIA_TRANSCRIPTION_MODELE:-large-v3-turbo}
+    volumes:
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/territoria/audio:/audio
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/modeles-audio:/modeles:ro
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    # Pic mesuré visé : 2,5 Go (modèle large-v3-turbo en int8 et séparation des voix) ; une séance à la fois.
+    mem_limit: 3g
+    # Il décode des fichiers venus de l'extérieur : aucun privilège, nombre de processus borné. Tué par le plafond de
+    # mémoire, il redémarre pour noter l'échec de la séance interrompue (deuxième interruption) et reprendre la file.
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    restart: on-failure
+
+  # Téléchargement vérifié des modèles de transcription, lancé par les scripts d'installation et de mise à jour
+  # (`compose run --rm travaux-modeles`), jamais par `up` : seul moment où cette image a un réseau.
+  travaux-modeles:
+    build:
+      context: ..
+      dockerfile: conteneurs/travaux.Dockerfile
+    profiles: ["outils"]
+    command: ["python", "-m", "travaux.modeles", "telecharger", "--manifeste", "/app/modeles-audio.json", "--dossier", "/modeles",
+              "--modeles", "${TERRITORIA_TRANSCRIPTION_MODELE:-large-v3-turbo},segmentation,empreintes"]
+    volumes:
+      - ${TERRITORIA_DONNEES_HOTE:?TERRITORIA_DONNEES_HOTE doit désigner le dossier territoria-donnees}/modeles-audio:/modeles
+    read_only: true
+    tmpfs:
+      - /tmp:mode=1777
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 256
+    networks:
+      - sortie
+
+networks:
+  # Sans aucune sortie : n8n et Territoria s'y parlent, rien d'autre.
+  interne:
+    driver: bridge
+    internal: true
+  # Réseau ordinaire, pour Territoria seul : Légifrance (PISTE), LM Studio sur la machine et le port publié.
+  sortie:
+    driver: bridge

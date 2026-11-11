@@ -1,0 +1,18 @@
+{
+  "name": "territoire-ia-components",
+  "private": true,
+  "version": "0.2.0",
+  "scripts": {
+    "build": "esbuild src/index.jsx --bundle --minify --format=iife --platform=browser --target=es2020 --outfile=../public/21st-components.js",
+    "test:ui": "esbuild tests/response.test.jsx --bundle --platform=node --format=cjs --external:react --external:react-dom/server --outfile=.response-test.cjs && node --test .response-test.cjs"
+  },
+  "dependencies": {
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-markdown": "10.1.0",
+    "remark-gfm": "4.0.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

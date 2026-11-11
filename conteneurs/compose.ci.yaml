@@ -1,0 +1,41 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Surcharge pour la CI et pour tests/integration.sh : `docker compose -f compose.yaml -f compose.ci.yaml …`.
+# Une fausse IA (tests/faux_llm.py) remplace LM Studio, et aucun réseau n'a de sortie vers Internet (le réseau `sortie`
+# de Territoria devient lui aussi `internal`) : si l'application ou n8n tentait de joindre un service extérieur, la
+# tentative échouerait au lieu de passer inaperçue.
+services:
+  faux-llm:
+    # Même image Python que territoria.Dockerfile (même empreinte multi-architecture).
+    image: python:3.12-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21eb064f8ee1fd42d02ebcd9d337
+    command: ["python", "/faux_llm.py"]
+    user: "10001:10001"
+    read_only: true
+    volumes:
+      - ../tests/faux_llm.py:/faux_llm.py:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:1234/v1/models', timeout=4).read()"]
+      interval: 5s
+      timeout: 5s
+      start_period: 5s
+      retries: 10
+    networks:
+      - interne
+
+  territoria:
+    environment:
+      - TERRITORIA_LLM_URL=http://faux-llm:1234/v1
+      - TERRITORIA_MODELE=faux-modele
+      - TERRITORIA_HORS_LIGNE=1
+    depends_on:
+      faux-llm:
+        condition: service_healthy
+    # Docker ne route aucun port publié d'un réseau `internal` : le parcours de bout en bout s'exécute donc dans le
+    # conteneur (`exec territoria python -m outils verifier`) et rien n'est publié sur la machine.
+    ports: !reset []
+
+networks:
+  interne:
+    internal: true
+  sortie:
+    internal: true

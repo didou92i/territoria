@@ -1,0 +1,13 @@
+# Contexte de construction de l'image Territoria : rien qui ne serve à l'image, rien de privé.
+.git
+.venv
+.superpowers
+territoria-donnees
+app/frontend/node_modules
+app/frontend/.response-test.cjs
+app/frontend/tests
+app/public/21st-components.js
+**/__pycache__
+**/*.pyc
+tests
+docs

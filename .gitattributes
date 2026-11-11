@@ -1,0 +1,7 @@
+# Fins de ligne : LF dans le dépôt et à l'extraction, sous Windows comme ailleurs. Les conteneurs Linux lisent ces
+# fichiers (scripts, workflows n8n, Dockerfile, roue vendue) : un clone Windows ne doit pas les convertir en CRLF.
+# Les scripts .ps1 restent donc en LF, avec leur BOM UTF-8 (Windows PowerShell 5.1 en a besoin pour lire les accents).
+* text=auto eol=lf
+
+# Fichier binaire : jamais converti ni comparé ligne à ligne.
+*.whl binary

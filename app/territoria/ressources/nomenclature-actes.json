@@ -1,0 +1,246 @@
+{
+ "source": "http://www.moselle.gouv.fr/content/download/1107/7994/file/nomenclature.pdf (nomenclature ACTES, citée par le schéma SCDL « Délibérations » 2.1.6)",
+ "date": "2026-11-02",
+ "note": "Intitulés de niveau 1 réaccentués (la source est en capitales) ; « Election Exécutif » → « Élection exécutif », « l’Etat » → « l’État ».",
+ "familles": {
+  "1": "Commande publique",
+  "2": "Urbanisme",
+  "3": "Domaine et patrimoine",
+  "4": "Fonction publique",
+  "5": "Institutions et vie politique",
+  "6": "Libertés publiques et pouvoirs de police",
+  "7": "Finances locales",
+  "8": "Domaines de compétences par thèmes",
+  "9": "Autres domaines de compétences"
+ },
+ "matieres": [
+  {
+   "code": "1.1",
+   "nom": "Marchés publics"
+  },
+  {
+   "code": "1.2",
+   "nom": "Délégations de service public"
+  },
+  {
+   "code": "1.3",
+   "nom": "Conventions de mandat"
+  },
+  {
+   "code": "1.4",
+   "nom": "Autres contrats"
+  },
+  {
+   "code": "1.5",
+   "nom": "Transactions (protocole d’accord transactionnel)"
+  },
+  {
+   "code": "1.6",
+   "nom": "Maîtrise d’œuvre"
+  },
+  {
+   "code": "1.7",
+   "nom": "Actes spéciaux et divers"
+  },
+  {
+   "code": "2.1",
+   "nom": "Documents d’urbanisme"
+  },
+  {
+   "code": "2.2",
+   "nom": "Actes relatifs au droit d’occupation et d’utilisation des sols"
+  },
+  {
+   "code": "2.3",
+   "nom": "Droit de préemption urbain"
+  },
+  {
+   "code": "3.1",
+   "nom": "Acquisitions"
+  },
+  {
+   "code": "3.2",
+   "nom": "Aliénations"
+  },
+  {
+   "code": "3.3",
+   "nom": "Locations"
+  },
+  {
+   "code": "3.4",
+   "nom": "Limites territoriales"
+  },
+  {
+   "code": "3.5",
+   "nom": "Actes de gestion du domaine public"
+  },
+  {
+   "code": "3.6",
+   "nom": "Actes de gestion du domaine privé"
+  },
+  {
+   "code": "4.1",
+   "nom": "Personnels titulaires et stagiaires de la F.P.T"
+  },
+  {
+   "code": "4.2",
+   "nom": "Personnels contractuels"
+  },
+  {
+   "code": "4.3",
+   "nom": "Fonction publique hospitalière"
+  },
+  {
+   "code": "4.4",
+   "nom": "Autres catégories de personnels"
+  },
+  {
+   "code": "4.5",
+   "nom": "Régime indemnitaire"
+  },
+  {
+   "code": "5.1",
+   "nom": "Élection exécutif"
+  },
+  {
+   "code": "5.2",
+   "nom": "Fonctionnement des assemblées"
+  },
+  {
+   "code": "5.3",
+   "nom": "Désignation des représentants"
+  },
+  {
+   "code": "5.4",
+   "nom": "Délégation de fonctions"
+  },
+  {
+   "code": "5.5",
+   "nom": "Délégation de signature"
+  },
+  {
+   "code": "5.6",
+   "nom": "Exercice des mandats locaux"
+  },
+  {
+   "code": "5.7",
+   "nom": "Intercommunalité"
+  },
+  {
+   "code": "5.8",
+   "nom": "Décision d’ester en justice"
+  },
+  {
+   "code": "6.1",
+   "nom": "Police municipale"
+  },
+  {
+   "code": "6.2",
+   "nom": "Pouvoirs du président du conseil général"
+  },
+  {
+   "code": "6.3",
+   "nom": "Pouvoirs du président du conseil régional"
+  },
+  {
+   "code": "6.4",
+   "nom": "Autres actes réglementaires"
+  },
+  {
+   "code": "6.5",
+   "nom": "Actes pris au nom de l’État"
+  },
+  {
+   "code": "7.1",
+   "nom": "Décisions budgétaires (B.P., D.M., C.A. …)"
+  },
+  {
+   "code": "7.2",
+   "nom": "Fiscalité"
+  },
+  {
+   "code": "7.3",
+   "nom": "Emprunts"
+  },
+  {
+   "code": "7.4",
+   "nom": "Interventions économiques en faveur des entreprises"
+  },
+  {
+   "code": "7.5",
+   "nom": "Subventions"
+  },
+  {
+   "code": "7.6",
+   "nom": "Contributions budgétaires"
+  },
+  {
+   "code": "7.7",
+   "nom": "Avances"
+  },
+  {
+   "code": "7.8",
+   "nom": "Fonds de concours"
+  },
+  {
+   "code": "7.9",
+   "nom": "Prise de participation (SEM, etc.)"
+  },
+  {
+   "code": "7.10",
+   "nom": "Divers"
+  },
+  {
+   "code": "8.1",
+   "nom": "Enseignement"
+  },
+  {
+   "code": "8.2",
+   "nom": "Aide sociale"
+  },
+  {
+   "code": "8.3",
+   "nom": "Voirie"
+  },
+  {
+   "code": "8.4",
+   "nom": "Aménagement du territoire"
+  },
+  {
+   "code": "8.5",
+   "nom": "Politique de la ville, habitat, logement"
+  },
+  {
+   "code": "8.6",
+   "nom": "Emploi, formation professionnelle"
+  },
+  {
+   "code": "8.7",
+   "nom": "Transports"
+  },
+  {
+   "code": "8.8",
+   "nom": "Environnement"
+  },
+  {
+   "code": "8.9",
+   "nom": "Culture"
+  },
+  {
+   "code": "9.1",
+   "nom": "Autres domaines de compétences des communes"
+  },
+  {
+   "code": "9.2",
+   "nom": "Autres domaines de compétences des départements"
+  },
+  {
+   "code": "9.3",
+   "nom": "Autres domaines de compétences des régions"
+  },
+  {
+   "code": "9.4",
+   "nom": "Vœux et motions"
+  }
+ ]
+}

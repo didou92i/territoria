@@ -1,0 +1,262 @@
+{
+ "as_of": "2026-11-01",
+ "origine": "API Légifrance (PISTE), version en vigueur au jour indiqué",
+ "sources": [
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L327-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L327-1\n\nLes personnes recrutées au sein de la fonction publique à la suite de l'une des procédures de recrutement par concours, de recrutement sans concours ou de changement de corps ou de cadres d'emplois accomplissent une période probatoire dénommée stage comprenant, le cas échéant, une période de formation lorsque le statut particulier du corps ou du cadre d'emplois le prévoit.",
+   "sha256": "58fb112676477e820df1c9412338e14e1dc46ea4fd589c584c700fcdcfb6ae7e",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044426760",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:02.315398Z",
+   "id": "LEGIARTI000044426760"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L327-3",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L327-3\n\nLa nomination à un grade de la fonction publique territoriale présente un caractère conditionnel pour tout recrutement : 1° Par concours ; 2° Sans concours pour un recrutement sur un emploi de reconnaissance nationale ou sur un emploi de catégorie C ; 3° Par voie de promotion interne ; 4° Par les centres de gestion dans les conditions prévues aux articles L. 452-44 et L. 452-48. La titularisation peut être prononcée à l'issue d'un stage dont la durée est fixée par le statut particulier.",
+   "sha256": "d63990df2ab2bfd4d604df1775f811e45b88c74f6cd47b86a9e619d346ed08e6",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054703744",
+   "version": {
+    "start": "2026-08-19",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:02.313927Z",
+   "id": "LEGIARTI000054703744"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L327-7",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L327-7\n\nL'autorité territoriale pourvoit l'emploi créé ou vacant en nommant l'un des candidats inscrits sur une liste d'aptitude établie après concours ou l'un des fonctionnaires qui s'est déclaré candidat par voie de mutation, de détachement, d'intégration directe ou, le cas échéant et dans les conditions fixées par chaque statut particulier, par voie de promotion interne et d'avancement de grade.",
+   "sha256": "44d8033577c7ec7cdb38ab1db0c7170695bef94795a3232ef38c0ad8b0c87fc6",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044426746",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:02.714684Z",
+   "id": "LEGIARTI000044426746"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "R327-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "R327-1\n\nAu sens du présent chapitre, a la qualité de fonctionnaire stagiaire : 1° Dans les administrations de l'Etat et établissements mentionnés à l'article L. 3, la personne ayant satisfait à l'une des procédures de recrutement prévues aux articles L. 325-1 et L. 523-1, et ayant vocation à être titularisée après la période probatoire ou la période de formation exigée par le statut particulier du corps dans lequel elle a été recrutée ; 2° Dans les collectivités territoriales et établissements mentionnés à l'article L. 4, la personne nommée dans un emploi permanent accomplissant les fonctions afférentes audit emploi et ayant vocation à être titularisée après la période probatoire dans le grade correspondant à cet emploi ; 3° Dans les établissements mentionnés à l'article L. 5 : a) La personne ayant satisfait à l'une des procédures de recrutement prévues aux articles L. 325-1 et L. 523-1, ayant vocation à être titularisée après la période probatoire ou la période de formation exigée par le statut particulier du corps dans lequel elle a été recrutée ; b) Les élèves attachés mentionnés à l'article 8 du décret n° 2001-1207 du 19 décembre 2001 modifié portant statut particulier du corps des attachés d'administration hospitalière ; c) Les élèves directeurs mentionnés à l'article 14 du décret n° 2002-550 du 19 avril 2002 du 19 avril 2002 portant statut particulier du corps de directeur des soins de la fonction publique hospitalière ; d) Les élèves directeurs mentionnés à l'article 4 du décret n° 2005-921 du 2 août 2005 portant statut particulier des grades et emplois des personnels de direction des établissements mentionnés aux 1° et 2° de l'article L. 5 du code général de la fonction publique ; e) Les élèves directeurs mentionnés à l'article 4 du décret n° 2007-1930 du 26 décembre 2007 portant statut particulier du corps des directeurs d'établissements sanitaires et sociaux de la fonction publique hospitalière.",
+   "sha256": "74ad4ff8dc1663fb258ce859f73659a2346c3edd8ac47a2c7a6b98b3936624f6",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051962248",
+   "version": {
+    "start": "2025-10-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:02.809697Z",
+   "id": "LEGIARTI000051962248"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "R327-9",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "R327-9\n\nLa durée normale du stage est fixée : 1° Pour le fonctionnaire stagiaire de l'Etat, par le statut particulier du corps dans lequel il a vocation à être titularisé ; 2° A un an pour le fonctionnaire stagiaire territorial et hospitalier sauf disposition contraire du statut particulier du corps ou du cadre d'emplois dans lequel il a vocation à être titularisé.",
+   "sha256": "e145abf75240219da8528a7090e1656dee0c8d7741e76759f457d00ab18c1933",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051962275",
+   "version": {
+    "start": "2025-10-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:02.827999Z",
+   "id": "LEGIARTI000051962275"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "R327-13",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "R327-13\n\nLa prolongation de stage n'est pas prise en compte dans le calcul de l'ancienneté à retenir lors de la titularisation du fonctionnaire stagiaire dans son nouveau grade.",
+   "sha256": "c3d39b5c1a6c0bfb97241beeea7af012952dff4810b31d891968b32233767f76",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051962285",
+   "version": {
+    "start": "2025-10-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:03.401861Z",
+   "id": "LEGIARTI000051962285"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L522-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L522-1\n\nL'avancement des fonctionnaires comprend l'avancement d'échelon et l'avancement de grade.",
+   "sha256": "9214805fba081962268b5548558a621152da19773a7481d6f4b6f15feb4a556f",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425566",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:03.402638Z",
+   "id": "LEGIARTI000044425566"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L522-2",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L522-2\n\nL'avancement d'échelon est accordé de plein droit. Il a lieu de façon continue d'un échelon à l'échelon immédiatement supérieur. Il est fonction de l'ancienneté. Il se traduit par une augmentation de traitement.",
+   "sha256": "5fe6a7c9e69bd9bff113195b6aceaae21ca3cd422926e5d2e326ebf30aac0f01",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425564",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:03.863123Z",
+   "id": "LEGIARTI000044425564"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L612-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L612-1\n\nLe fonctionnaire peut, sur sa demande, être autorisé à accomplir un service à temps partiel, qui ne peut être inférieur au mi-temps. Cette autorisation est accordée sous réserve des nécessités de la continuité et du fonctionnement du service, compte tenu des possibilités d'aménagement de l'organisation du travail.",
+   "sha256": "f4807c9aa055fccbbca5186d82ce2d032d524128b0cb7eacf15913124ac3f742",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425078",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:03.406310Z",
+   "id": "LEGIARTI000044425078"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L612-2",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L612-2\n\nLes refus opposés à une demande de travail à temps partiel doivent être précédés d'un entretien et motivés dans les conditions définies par les articles L. 211-2 à L. 211-7 du code des relations entre le public et l'administration.",
+   "sha256": "eeb9678c16f8a76e5d260c90c7fef98cdab0a47e6eb6bc575adddc4d32fdd995",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425076",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:03.905547Z",
+   "id": "LEGIARTI000044425076"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L612-3",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L612-3\n\nL'autorisation d'accomplir un travail à temps partiel est accordée de plein droit au fonctionnaire selon une quotité de 50, 60, 70 ou 80 % : 1° A l'occasion de chaque naissance, jusqu'au troisième anniversaire de l'enfant ; 2° A l'occasion de chaque adoption, jusqu'à l'expiration d'un délai de trois ans à compter de l'arrivée au foyer de l'enfant adopté ; 3° Pour donner des soins à une personne atteinte d'un handicap nécessitant la présence d'un tiers, ou victime d'un accident ou d'une maladie grave, si cette personne est son conjoint, son partenaire avec lequel il est lié par un pacte civil de solidarité, un enfant à charge ou un ascendant ; 4° S'il relève de l'une des catégories de handicap mentionnées aux 1°, 2°, 3°, 4°, 9°, 10° et 11° de l'article L. 5212-13 du code du travail, après avis du médecin du travail.",
+   "sha256": "791c931268a8a89e7a56b33da7f1da868a58bd40f5a5f1821df7e2a803654f44",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425074",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:03.947021Z",
+   "id": "LEGIARTI000044425074"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L612-5",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L612-5\n\nLe fonctionnaire autorisé à travailler à temps partiel perçoit une fraction du traitement, de l'indemnité de résidence ainsi que des primes et indemnités de toute nature afférentes soit à son grade et à son échelon, soit à l'emploi auquel il a été nommé. Cette fraction est égale au rapport entre la durée hebdomadaire du service effectué et la durée résultant des obligations hebdomadaires de service réglementairement fixées pour les fonctionnaires de même grade exerçant à temps complet les mêmes fonctions dans l'administration ou le service concerné. Pour les quotités égales à 80 ou 90 % du temps complet et par dérogation au second alinéa, cette fraction est égale respectivement aux six septièmes ou aux trente-deux trente-cinquièmes de la rémunération mentionnée au premier alinéa.",
+   "sha256": "a5a2e557b4527f301fdbba8f2f26901383ebcfb239a26af1dc2fee143ece36d0",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425070",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:04.443899Z",
+   "id": "LEGIARTI000044425070"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L612-12",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L612-12\n\nLes modalités d'exercice du travail à temps partiel sont fixées par l'organe délibérant de chaque collectivité ou établissement public mentionnés à l'article L. 4.",
+   "sha256": "fc6330da7a33d1e5cf1e7f59302e077c34f0f2b6c299c26f34be0c8345941f64",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044425052",
+   "version": {
+    "start": "2022-03-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:04.387279Z",
+   "id": "LEGIARTI000044425052"
+  },
+  {
+   "code": "Code de justice administrative",
+   "article": "R421-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "R421-1\n\nLa juridiction ne peut être saisie que par voie de recours formé contre une décision, et ce, dans les deux mois à partir de la notification ou de la publication de la décision attaquée. Lorsque la requête tend au paiement d'une somme d'argent, elle n'est recevable qu'après l'intervention de la décision prise par l'administration sur une demande préalablement formée devant elle. Le délai prévu au premier alinéa n'est pas applicable à la contestation des mesures prises pour l'exécution d'un contrat.",
+   "sha256": "94527b56b9e7ecf3739d609c4cd042427253d93403d40424c5342f312257075e",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000039807005",
+   "version": {
+    "start": "2020-01-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:04.408672Z",
+   "id": "LEGIARTI000039807005"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2131-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2131-1\n\nI.-Les actes pris par les autorités communales sont exécutoires de plein droit dès qu'ils ont été portés à la connaissance des intéressés dans les conditions prévues au présent article et, pour les actes mentionnés à l'article L. 2131-2, qu'il a été procédé à la transmission au représentant de l'Etat dans le département ou à son délégué dans l'arrondissement prévue par cet article. Le maire peut, sous sa responsabilité, certifier le caractère exécutoire d'un acte. II.-Les décisions individuelles prises par les autorités communales sont notifiées aux personnes qui en font l'objet. III.-Les actes réglementaires et les décisions ne présentant ni un caractère réglementaire, ni un caractère individuel font l'objet d'une publication sous forme électronique, dans des conditions fixées par décret en Conseil d'Etat, de nature à garantir leur authenticité et à assurer leur mise à disposition du public de manière permanente et gratuite. IV.-Par dérogation aux dispositions du III, dans les communes de moins de 3 500 habitants, les actes réglementaires et les décisions ni réglementaires, ni individuelles sont rendus publics : 1° Soit par affichage ; 2° Soit par publication sur papier, dans des conditions fixées par décret en Conseil d'Etat ; 3° Soit par publication sous forme électronique, dans les conditions prévues au III. Le conseil municipal choisit le mode de publicité applicable dans la commune. Il peut modifier ce choix à tout moment. A défaut de délibération sur ce point, les dispositions du III sont applicables. En cas de création d'une commune de 3 500 habitants ou plus par fusion de communes dont aucune ne dépassait ce seuil, le conseil municipal de la commune nouvelle dispose de la faculté de choix prévue au présent IV pendant une période de six mois à compter de la publication de l'arrêté préfectoral portant création de la commune nouvelle. Au terme de ce délai, les dispositions du III s'appliquent. V.-En cas d'urgence, un acte devant, en vertu des dispositions du III ou du IV, faire l'objet d'une publication par voie électronique ou sur papier entre en vigueur dès qu'il a été procédé à son affichage et, s'il est soumis aux dispositions de l'article L. 2131-2, à sa transmission au représentant de l'Etat dans le département ou à son délégué dans l'arrondissement. Il est néanmoins procédé dans les meilleurs délais à la publication normalement requise, qui peut seule faire courir le délai de recours contentieux. VI.-Lorsqu'une personne demande à obtenir sur papier un acte publié sous forme électronique, le maire le lui communique. Il n'est pas tenu de donner suite aux demandes abusives, en particulier par leur nombre ou par leur caractère répétitif ou systématique.",
+   "sha256": "73ca9102a16353f923aa3df362a7fd38dabb435edb3ab08d422b2234ee1abe32",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044190563",
+   "version": {
+    "start": "2022-07-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:04.993375Z",
+   "id": "LEGIARTI000044190563"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2131-2",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2131-2\n\nI.-Sont transmis au représentant de l'Etat dans le département ou à son délégué dans l'arrondissement, dans les conditions prévues au II : 1° Les délibérations du conseil municipal ou les décisions prises par délégation du conseil municipal en application de l'article L. 2122-22 à l'exception : a) Des délibérations relatives aux tarifs des droits de voirie et de stationnement, au classement, au déclassement, à l'établissement des plans d'alignement et de nivellement, à l'ouverture, au redressement et à l'élargissement des voies communales ; b) Des délibérations relatives aux taux de promotion pour l'avancement de grade des fonctionnaires, à l'affiliation ou à la désaffiliation aux centres de gestion ainsi qu'aux conventions portant sur les missions supplémentaires à caractère facultatif confiées aux centres de gestion. 2° Les décisions réglementaires et individuelles prises par le maire dans l'exercice de son pouvoir de police. En sont toutefois exclues : -celles relatives à la circulation et au stationnement, à l'exception des sanctions prises en application de l'article L. 2212-2-1 ; -celles relatives à l'exploitation, par les associations, de débits de boissons pour la durée des manifestations publiques qu'elles organisent ; 3° Les actes à caractère réglementaire pris par les autorités communales dans tous les autres domaines qui relèvent de leur compétence en application de la loi ; 4° Les conventions relatives aux emprunts, les marchés et les accords-cadres d'un montant au moins égal à un seuil défini par décret, les marchés de partenariat ainsi que les contrats de concession, dont les délégations de service public, et les concessions d'aménagement ; 5° Les décisions individuelles relatives à la nomination, au recrutement, y compris le contrat d'engagement, et au licenciement des agents non titulaires, à l'exception de celles prises pour faire face à un besoin lié à un accroissement temporaire ou saisonnier d'activité, en application de l'article L. 332-23 du code général de la fonction publique ; 6° Le permis de construire et les autres autorisations d'utilisation du sol et le certificat d'urbanisme délivrés par le maire ou le président de l'établissement public de coopération intercommunale, lorsqu'il a reçu compétence dans les conditions prévues aux articles L. 422-1 et L. 422-3 du code de l'urbanisme ; 7° Les ordres de réquisition du comptable pris par le maire ; 8° Les décisions relevant de l'exercice de prérogatives de puissance publique, prises par les sociétés d'économie mixte locales pour le compte d'une commune ou d'un établissement public de coopération intercommunale. II.-La transmission prévue au I peut s'effectuer par voie électronique, selon des modalités fixées par décret en Conseil d'Etat. Pour les communes de plus de 50 000 habitants, cette transmission est réalisée selon ces modalités. La transmission des décisions individuelles intervient dans un délai de quinze jours à compter de leur signature. La preuve de la réception des actes par le représentant de l'Etat dans le département ou son délégué dans l'arrondissement peut être apportée par tout moyen. L'accusé de réception, qui est immédiatement délivré, peut être utilisé à cet effet mais n'est pas une condition du caractère exécutoire des actes.",
+   "sha256": "8d0e6913f026b559d37371c08db4bc2b9557b466ec7c1d36ef8d63fa57f0c56d",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044190560",
+   "version": {
+    "start": "2022-07-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-11-01T20:42:05.018790Z",
+   "id": "LEGIARTI000044190560"
+  }
+ ]
+}

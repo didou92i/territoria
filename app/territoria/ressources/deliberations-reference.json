@@ -1,0 +1,192 @@
+{
+ "as_of": "2026-11-01",
+ "origine": "Légifrance, version en vigueur consultée le 01/11/2026",
+ "sources": [
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-17",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2121-17\n\nLe conseil municipal ne délibère valablement que lorsque la majorité de ses membres en exercice est présente.\n\nSi, après une première convocation régulièrement faite selon les dispositions des articles L. 2121-10 à L. 2121-12, ce quorum n'est pas atteint, le conseil municipal est à nouveau convoqué à trois jours au moins d'intervalle. Il délibère alors valablement sans condition de quorum.",
+   "sha256": "360563d810cd67f4f0f29d16d2115d1f72553f687c993aa4e1df19c4467fbc7e",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006389875",
+   "version": {
+    "note": "Création Loi 96-142 1996-02-21 jorf 24 février 1996"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000006389875"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-20",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2121-20\n\nUn conseiller municipal empêché d'assister à une séance peut donner à un collègue de son choix pouvoir écrit de voter en son nom. Un même conseiller municipal ne peut être porteur que d'un seul pouvoir. Le pouvoir est toujours révocable. Sauf cas de maladie dûment constatée ou de congé de maternité dans les conditions prévues à l'article L. 331-3 du code de la sécurité sociale, il ne peut être valable pour plus de trois séances consécutives.\n\nLes délibérations sont prises à la majorité absolue des suffrages exprimés.\n\nLorsqu'il y a partage égal des voix et sauf cas de scrutin secret, la voix du président est prépondérante.",
+   "sha256": "38af592c6771b9d4a24d154900e4411529526d9fef972b40e75e320ef459a595",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053152931",
+   "version": {
+    "note": "Modifié par LOI n°2025-1249 du 22 décembre 2025 - art. 29"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000053152931"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-23",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2121-23\n\nLes délibérations sont inscrites par ordre de date sur un registre tenu dans des conditions définies par décret en Conseil d'Etat. Elles sont signées par le maire et le ou les secrétaires de séance.",
+   "sha256": "d15e106569196570473fbb278b7f94b845f3c842f507633dee447c603ea23944",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044190494",
+   "version": {
+    "note": "Modifié par Ordonnance n°2021-1310 du 7 octobre 2021 - art. 2"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000044190494"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-29",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2121-29\n\nLe conseil municipal règle par ses délibérations les affaires de la commune.\n\nIl donne son avis toutes les fois que cet avis est requis par les lois et règlements, ou qu'il est demandé par le représentant de l'Etat dans le département.\n\nLorsque le conseil municipal, à ce régulièrement requis et convoqué, refuse ou néglige de donner avis, il peut être passé outre.\n\nLe conseil municipal émet des voeux sur tous les objets d'intérêt local.",
+   "sha256": "797a67930e86ba97f312ad6693ccea69194118631d3461843205364bffec80d2",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006389895",
+   "version": {
+    "note": "Création Loi 96-142 1996-02-21 jorf 24 février 1996"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000006389895"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L1611-4",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L1611-4\n\nToute association, oeuvre ou entreprise ayant reçu une subvention peut être soumise au contrôle des délégués de la collectivité qui l'a accordée.\n\nTous groupements, associations, oeuvres ou entreprises privées qui ont reçu dans l'année en cours une ou plusieurs subventions sont tenus de fournir à l'autorité qui a mandaté la subvention une copie certifiée de leurs budgets et de leurs comptes de l'exercice écoulé, ainsi que tous documents faisant connaître les résultats de leur activité.\n\nIl est interdit à tout groupement ou à toute association, œuvre ou entreprise ayant reçu une subvention d'en employer tout ou partie en subventions à d'autres associations, œuvres ou entreprises, sauf lorsque cela est expressément prévu dans la convention conclue entre la collectivité territoriale et l'organisme subventionné.",
+   "sha256": "f3942194d8e88414b6f5ee74809e839f45f207371216d3513874bfd831ac1e46",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000020629742",
+   "version": {
+    "note": "Modifié par LOI n°2009-526 du 12 mai 2009 - art. 84"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000020629742"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2241-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2241-1\n\nLe conseil municipal délibère sur la gestion des biens et les opérations immobilières effectuées par la commune, sous réserve, s'il s'agit de biens appartenant à une section de commune, des dispositions des articles L. 2411-1 à L. 2411-19.\n\nLe bilan des acquisitions et cessions opérées sur le territoire d'une commune de plus de 2 000 habitants par celle-ci, ou par une personne publique ou privée agissant dans le cadre d'une convention avec cette commune, donne lieu chaque année à une délibération du conseil municipal.\n\nToute cession d'immeubles ou de droits réels immobiliers par une commune de plus de 2 000 habitants donne lieu à délibération motivée du conseil municipal portant sur les conditions de la vente et ses caractéristiques essentielles. Le conseil municipal délibère au vu de l'avis de l'autorité compétente de l'Etat. Cet avis est réputé donné à l'issue d'un délai d'un mois à compter de la saisine de cette autorité.\n\nToute cession d'immeubles ou de droits réels immobiliers par une commune ayant pour objet l'édification ou l'exploitation d'une infrastructure d'accueil d'éléments d'un réseau d'accès radioélectrique, au sens de l'article L. 32 du code des postes et des communications électroniques, peut être soumise à l'avis de l'autorité compétente de l'Etat. Le conseil municipal délibère au vu de cet avis, réputé donné à l'expiration d'un délai d'un mois à compter de la saisine de cette autorité.",
+   "sha256": "47b2fc8172b56587d1b8d51ad97e86fc6612b6a7f8810b978e5590cd0b053e83",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000054141933",
+   "version": {
+    "note": "Modifié par LOI n°2026-403 du 26 mai 2026 - art. 39 (V)"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000054141933"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L1612-11",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L1612-11\n\nSous réserve du respect des dispositions des articles L. 1612-1, L. 1612-9 et L. 1612-10, des modifications peuvent être apportées au budget par l'organe délibérant, jusqu'au terme de l'exercice auquel elles s'appliquent.\n\nDans le délai de vingt et un jours suivant la fin de l'exercice budgétaire, l'organe délibérant peut, en outre, apporter au budget les modifications permettant d'ajuster les crédits de la section de fonctionnement pour régler les dépenses engagées avant le 31 décembre et inscrire les crédits nécessaires à la réalisation des opérations d'ordre de chacune des deux sections du budget ou entre les deux sections.\n\nLes délibérations relatives aux modifications budgétaires prévues à l'alinéa précédent doivent être transmises au représentant de l'Etat au plus tard cinq jours après le délai limite fixé pour leur adoption. Les mandatements découlant des modifications budgétaires ainsi décidées doivent être achevés au plus tard le 31 janvier suivant l'exercice auquel ils se rapportent.",
+   "sha256": "2acc1741b95b3dfd3e97f3b103cba907f8cda0bdd894d07526b6d326eaf6de09",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000051731668",
+   "version": {
+    "note": "Modifié par Ordonnance n°2025-526 du 12 juin 2025 - art. 1"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000051731668"
+  },
+  {
+   "code": "Code général de la fonction publique",
+   "article": "L313-1",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L313-1\n\nLes emplois de chaque collectivité ou établissement mentionné à l'article L. 4 sont créés par l'organe délibérant de la collectivité ou de l'établissement.La délibération précise le grade ou, le cas échéant, les grades correspondant à l'emploi créé. Lorsqu'il s'agit d'un emploi mentionné à l'article L. 412-5, elle précise en outre la nature de celui-ci et la durée des fonctions. Elle indique, le cas échéant, si l'emploi peut également être pourvu par un agent contractuel territorial. Dans ce dernier cas, elle indique le motif invoqué, la nature des fonctions, les niveaux de recrutement et de rémunération de l'emploi créé.Aucune création d'emploi ne peut intervenir si les crédits disponibles au chapitre budgétaire correspondant ne le permettent.Un décret en Conseil d'Etat fixe le nombre maximal d'emplois mentionnés à l'article L. 412-5 comportant des responsabilités d'encadrement, notamment de directeur général adjoint des services, d'emplois de direction de services, de conseil ou d'expertise ou de conduite de projet que chaque collectivité territoriale ou établissement public peut créer, en fonction de son importance démographique.",
+   "sha256": "73a00d780d3082fc03b2df5dc23659f63209e85fb4d23593b1756cf35a6364a2",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044427026",
+   "version": {
+    "note": "Création Ordonnance n°2021-1574 du 24 novembre 2021"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000044427026"
+  },
+  {
+   "code": "Code de l'éducation",
+   "article": "R531-52",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "R531-52\n\nLes tarifs de la restauration scolaire fournie aux élèves des écoles maternelles, des écoles élémentaires, des collèges et des lycées de l'enseignement public sont fixés par la collectivité territoriale qui en a la charge.",
+   "sha256": "03af0f56cbd83c8db22ff47ff2b9ee2f130d5b5d30e012d862ca46e43475dfda",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000020743085",
+   "version": {
+    "note": "Création Décret n°2009-553 du 15 mai 2009"
+   },
+   "retrieved_at": "2026-11-01T15:00:00Z",
+   "id": "LEGIARTI000020743085"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2131-1",
+   "status": "ok",
+   "as_of": "2026-10-29",
+   "text": "L2131-1\n\nI.-Les actes pris par les autorités communales sont exécutoires de plein droit dès qu'ils ont été portés à la connaissance des intéressés dans les conditions prévues au présent article et, pour les actes mentionnés à l'article L. 2131-2, qu'il a été procédé à la transmission au représentant de l'Etat dans le département ou à son délégué dans l'arrondissement prévue par cet article. Le maire peut, sous sa responsabilité, certifier le caractère exécutoire d'un acte. II.-Les décisions individuelles prises par les autorités communales sont notifiées aux personnes qui en font l'objet. III.-Les actes réglementaires et les décisions ne présentant ni un caractère réglementaire, ni un caractère individuel font l'objet d'une publication sous forme électronique, dans des conditions fixées par décret en Conseil d'Etat, de nature à garantir leur authenticité et à assurer leur mise à disposition du public de manière permanente et gratuite. IV.-Par dérogation aux dispositions du III, dans les communes de moins de 3 500 habitants, les actes réglementaires et les décisions ni réglementaires, ni individuelles sont rendus publics : 1° Soit par affichage ; 2° Soit par publication sur papier, dans des conditions fixées par décret en Conseil d'Etat ; 3° Soit par publication sous forme électronique, dans les conditions prévues au III. Le conseil municipal choisit le mode de publicité applicable dans la commune. Il peut modifier ce choix à tout moment. A défaut de délibération sur ce point, les dispositions du III sont applicables. En cas de création d'une commune de 3 500 habitants ou plus par fusion de communes dont aucune ne dépassait ce seuil, le conseil municipal de la commune nouvelle dispose de la faculté de choix prévue au présent IV pendant une période de six mois à compter de la publication de l'arrêté préfectoral portant création de la commune nouvelle. Au terme de ce délai, les dispositions du III s'appliquent. V.-En cas d'urgence, un acte devant, en vertu des dispositions du III ou du IV, faire l'objet d'une publication par voie électronique ou sur papier entre en vigueur dès qu'il a été procédé à son affichage et, s'il est soumis aux dispositions de l'article L. 2131-2, à sa transmission au représentant de l'Etat dans le département ou à son délégué dans l'arrondissement. Il est néanmoins procédé dans les meilleurs délais à la publication normalement requise, qui peut seule faire courir le délai de recours contentieux. VI.-Lorsqu'une personne demande à obtenir sur papier un acte publié sous forme électronique, le maire le lui communique. Il n'est pas tenu de donner suite aux demandes abusives, en particulier par leur nombre ou par leur caractère répétitif ou systématique.",
+   "sha256": "73ca9102a16353f923aa3df362a7fd38dabb435edb3ab08d422b2234ee1abe32",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044190563",
+   "version": {
+    "start": "2022-07-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-10-29T17:55:55.218002Z",
+   "id": "LEGIARTI000044190563"
+  },
+  {
+   "code": "Code de justice administrative",
+   "article": "R421-1",
+   "status": "ok",
+   "as_of": "2026-10-29",
+   "text": "R421-1\n\nLa juridiction ne peut être saisie que par voie de recours formé contre une décision, et ce, dans les deux mois à partir de la notification ou de la publication de la décision attaquée. Lorsque la requête tend au paiement d'une somme d'argent, elle n'est recevable qu'après l'intervention de la décision prise par l'administration sur une demande préalablement formée devant elle. Le délai prévu au premier alinéa n'est pas applicable à la contestation des mesures prises pour l'exécution d'un contrat.",
+   "sha256": "94527b56b9e7ecf3739d609c4cd042427253d93403d40424c5342f312257075e",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000039807005",
+   "version": {
+    "start": "2020-01-01",
+    "end": null,
+    "end_status": "open"
+   },
+   "retrieved_at": "2026-10-29T17:55:55.236175Z",
+   "id": "LEGIARTI000039807005"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2122-22",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2122-22\n\nLe maire peut, en outre, par délégation du conseil municipal, être chargé, en tout ou partie, et pour la durée de son mandat :\n\n1° D'arrêter et modifier l'affectation des propriétés communales utilisées par les services publics municipaux et de procéder à tous les actes de délimitation des propriétés communales ;\n\n2° De fixer, dans les limites déterminées par le conseil municipal, les tarifs des droits de voirie, de stationnement, de dépôt temporaire sur les voies et autres lieux publics et, d'une manière générale, des droits prévus au profit de la commune qui n'ont pas un caractère fiscal, ces droits et tarifs pouvant, le cas échéant, faire l'objet de modulations résultant de l'utilisation de procédures dématérialisées ;\n\n3° De procéder, dans les limites fixées par le conseil municipal, à la réalisation des emprunts destinés au financement des investissements prévus par le budget, et aux opérations financières utiles à la gestion des emprunts, y compris les opérations de couvertures des risques de taux et de change ainsi que de prendre les décisions mentionnées au III de l'article L. 1618-2 et au a de l'article L. 2221-5-1, sous réserve des dispositions du c de ce même article, et de passer à cet effet les actes nécessaires ;\n\n4° De prendre toute décision concernant la préparation, la passation, l'exécution et le règlement des marchés et des accords-cadres ainsi que toute décision concernant leurs avenants, lorsque les crédits sont inscrits au budget ;\n\n5° De décider de la conclusion et de la révision du louage de choses pour une durée n'excédant pas douze ans ;\n\n6° De passer les contrats d'assurance ainsi que d'accepter les indemnités de sinistre y afférentes ;\n\n7° De créer, modifier ou supprimer les régies comptables nécessaires au fonctionnement des services municipaux ;\n\n8° De prononcer la délivrance et la reprise des concessions dans les cimetières ;\n\n9° D'accepter les dons et legs qui ne sont grevés ni de conditions ni de charges ;\n\n10° De décider l'aliénation de gré à gré de biens mobiliers jusqu'à 4 600 euros ;\n\n11° De fixer les rémunérations et de régler les frais et honoraires des avocats, notaires, huissiers de justice et experts ;\n\n12° De fixer, dans les limites de l'estimation des services fiscaux (domaines), le montant des offres de la commune à notifier aux expropriés et de répondre à leurs demandes ;\n\n13° De décider de la création de classes dans les établissements d'enseignement ;\n\n14° De fixer les reprises d'alignement en application d'un document d'urbanisme ;\n\n15° D'exercer, au nom de la commune, les droits de préemption définis par le code de l'urbanisme, que la commune en soit titulaire ou délégataire, de déléguer l'exercice de ces droits à l'occasion de l'aliénation d'un bien selon les dispositions prévues aux articles L. 211-2 à L. 211-2-3 ou au premier alinéa de l'article L. 213-3 de ce même code dans les conditions que fixe le conseil municipal ;\n\n16° D'intenter au nom de la commune les actions en justice ou de défendre la commune dans les actions intentées contre elle, dans les cas définis par le conseil municipal, et de transiger avec les tiers dans la limite de 1 000 € pour les communes de moins de 50 000 habitants et de 5 000 € pour les communes de 50 000 habitants et plus ;\n\n17° De régler les conséquences dommageables des accidents dans lesquels sont impliqués des véhicules municipaux dans la limite fixée par le conseil municipal ;\n\n18° De donner, en application de l'article L. 324-1 du code de l'urbanisme, l'avis de la commune préalablement aux opérations menées par un établissement public foncier local ;\n\n19° De signer la convention prévue par l'avant-dernier alinéa de l'article L. 311-4 du code de l'urbanisme précisant les conditions dans lesquelles un constructeur participe au coût d'équipement d'une zone d'aménagement concerté et de signer la convention prévue par le troisième alinéa de l'article L. 332-11-2 du même code, dans sa rédaction antérieure à la loi n° 2014-1655 du 29 décembre 2014 de finances rectificative pour 2014, précisant les conditions dans lesquelles un propriétaire peut verser la participation pour voirie et réseaux ;\n\n20° De réaliser les lignes de trésorerie sur la base d'un montant maximum autorisé par le conseil municipal ;\n\n21° D'exercer ou de déléguer, en application de l'article L. 214-1-1 du code de l'urbanisme, au nom de la commune et dans les conditions fixées par le conseil municipal, le droit de préemption défini par l'article L. 214-1 du même code ;\n\n22° D'exercer au nom de la commune le droit de priorité défini aux articles L. 240-1 à L. 240-3 du code de l'urbanisme ou de déléguer l'exercice de ce droit en application des mêmes articles, dans les conditions fixées par le conseil municipal ;\n\n23° De prendre les décisions mentionnées aux articles L. 523-4 et L. 523-5 du code du patrimoine relatives à la réalisation de diagnostics d'archéologie préventive prescrits pour les opérations d'aménagement ou de travaux sur le territoire de la commune et de conclure la convention prévue à l'article L. 523-7 du même code ;\n\n24° D'autoriser, au nom de la commune, le renouvellement de l'adhésion aux associations dont elle est membre ;\n\n25° D'exercer, au nom de la commune, le droit d'expropriation pour cause d'utilité publique prévu au troisième alinéa de l'article L. 151-37 du code rural et de la pêche maritime en vue de l'exécution des travaux nécessaires à la constitution d'aires intermédiaires de stockage de bois dans les zones de montagne ;\n\n26° De demander à tout organisme financeur, dans les conditions fixées par le conseil municipal, l'attribution de subventions ;\n\n27° De procéder, dans les limites fixées par le conseil municipal, au dépôt des demandes d'autorisations d'urbanisme relatives à la démolition, à la transformation ou à l'édification des biens municipaux ;\n\n28° D'exercer, au nom de la commune, le droit prévu au I de l'article 10 de la loi n° 75-1351 du 31 décembre 1975 relative à la protection des occupants de locaux à usage d'habitation ;\n\n29° D'ouvrir et d'organiser la participation du public par voie électronique prévue au I de l'article L. 123-19 du code de l'environnement ;\n\n30° D'admettre en non-valeur les titres de recettes, ou certaines catégories d'entre eux, présentés par le comptable public, chacun de ces titres correspondant à une créance irrécouvrable d'un montant inférieur à un seuil fixé par délibération du conseil municipal, qui ne peut être supérieur à un seuil fixé par décret. Ce même décret précise les modalités suivant lesquelles le maire rend compte au conseil municipal de l'exercice de cette délégation ;\n\n31° D'autoriser les mandats spéciaux que les membres du conseil municipal peuvent être amenés à exercer dans le cadre de leurs fonctions, ainsi que le remboursement des frais afférents prévus à l'article L. 2123-18 du présent code.\n\nLes délégations consenties en application du 3° du présent article prennent fin dès l'ouverture de la campagne électorale pour le renouvellement du conseil municipal.",
+   "sha256": "dd8c820dea558b0fcdb2566bf4f17b8699ff8143f46649bd9a27868b69da0fff",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000045212383",
+   "version": {
+    "note": "Modifié par LOI n°2022-217 du 21 février 2022 - art. 110, 173 et 177"
+   },
+   "retrieved_at": "2026-11-01T17:00:00Z",
+   "id": "LEGIARTI000045212383"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2122-23",
+   "status": "ok",
+   "as_of": "2026-11-01",
+   "text": "L2122-23\n\nLes décisions prises par le maire en vertu de l'article L. 2122-22 sont soumises aux mêmes règles que celles qui sont applicables aux délibérations des conseils municipaux portant sur les mêmes objets.\n\nSauf disposition contraire dans la délibération portant délégation, les décisions prises en application de celle-ci peuvent être signées par un adjoint ou un conseiller municipal agissant par délégation du maire dans les conditions fixées à l'article L. 2122-18. Sauf disposition contraire dans la délibération, les décisions relatives aux matières ayant fait l'objet de la délégation sont prises, en cas d'empêchement du maire, par le conseil municipal.\n\nLe maire doit rendre compte à chacune des réunions obligatoires du conseil municipal.\n\nLe conseil municipal peut toujours mettre fin à la délégation.",
+   "sha256": "591cd1e2968b5129c16dff9900639d3dd7e3f07af9bba55122dad4764e78cd53",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006389965",
+   "version": {
+    "note": "Modifié par Loi n°2004-809 du 13 août 2004 - art. 195"
+   },
+   "retrieved_at": "2026-11-01T17:00:00Z",
+   "id": "LEGIARTI000006389965"
+  }
+ ]
+}

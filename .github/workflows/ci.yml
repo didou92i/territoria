@@ -1,0 +1,164 @@
+# SPDX-License-Identifier: EUPL-1.2
+# SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
+# Intégration continue de Territoria : tests et intégration sous Linux, scripts d'installation en matrice de systèmes.
+# Les actions de GitHub sont épinglées par l'empreinte du commit de leur version (indiquée en commentaire).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+      - name: Dépendances Python figées et roue vendue
+        run: |
+          pip install -r requirements.lock
+          (cd vendor && sha256sum -c SHA256SUMS)
+          pip install --no-deps vendor/droit_territorial-0.4.0-py3-none-any.whl
+      - name: Tests unitaires
+        run: PYTHONPATH=app python -m unittest discover -s tests -q
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+      - name: Dépendances de l'interface
+        run: npm ci --ignore-scripts
+        working-directory: app/frontend
+      - name: Tests de l'interface
+        run: npm run test:ui
+        working-directory: app/frontend
+
+  integration:
+    runs-on: ubuntu-latest
+    # La version ratée du scénario de mise à jour attend 300 s (ATTENTE_MAX) qu'un service jamais sain le devienne.
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Construction de l'image, secrets, provisionnement de n8n, corpus de démonstration, test de bout en bout avec la
+      # fausse IA, contrôle des journaux et du réseau interne, puis mise à jour ratée avec retour automatique
+      # (install/mettre-a-jour.sh dans un clone temporaire du dépôt, version essai-echec dont /healthz renvoie 500) :
+      # tout est dans le script, que chacun peut aussi lancer.
+      - name: Parcours d'intégration (fausse IA, réseau interne, mise à jour ratée)
+        run: bash tests/integration.sh
+
+  # Scripts d'installation, par système. macOS : shellcheck, diagnostic (les 11 clés) et étape moteur en simulation avec
+  # bash. Windows : PSScriptAnalyzer (erreurs), syntaxe de chaque script avec Windows PowerShell 5.1, puis diagnostic et
+  # simulation avec Windows PowerShell 5.1 et avec PowerShell 7.
+  scripts:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: shellcheck des scripts .sh
+        if: runner.os == 'macOS'
+        run: |
+          command -v shellcheck >/dev/null || brew install shellcheck
+          shellcheck --version
+          shellcheck install/*.sh
+      - name: Diagnostic (les 11 clés, une par ligne)
+        if: runner.os == 'macOS'
+        run: |
+          bash install/diagnostic.sh | tee "$RUNNER_TEMP/diagnostic.txt"
+          for cle in systeme architecture memoire_go gpu disque_libre_go port_8878 moteur docker_desktop lms chiffrement_disque palier_modele; do
+            grep -q "^$cle=" "$RUNNER_TEMP/diagnostic.txt" || { echo "Clé absente du diagnostic : $cle"; exit 1; }
+          done
+      - name: Étape moteur en simulation (aucune modification)
+        if: runner.os == 'macOS'
+        run: |
+          sortie="$(bash install/installer.sh --etape moteur --simulation)"
+          printf '%s\n' "$sortie"
+          [ "$(printf '%s\n' "$sortie" | tail -n 1)" = "ETAPE moteur : OK" ]
+      - name: PSScriptAnalyzer (aucune erreur)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Install-Module PSScriptAnalyzer -RequiredVersion 1.25.0 -Scope CurrentUser -Force
+          $erreurs = @(Invoke-ScriptAnalyzer -Path install -Severity Error)
+          $erreurs | Format-Table RuleName, ScriptName, Line, Message -AutoSize -Wrap | Out-String -Width 200
+          if ($erreurs.Count -gt 0) { exit 1 }
+      - name: Syntaxe de chaque script avec Windows PowerShell 5.1
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $PSVersionTable.PSVersion
+          $total = 0
+          foreach ($fichier in Get-ChildItem install -Filter *.ps1) {
+            $erreurs = $null
+            $jetons = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile($fichier.FullName, [ref]$jetons, [ref]$erreurs)
+            foreach ($erreur in $erreurs) { "{0}:{1} {2}" -f $fichier.Name, $erreur.Extent.StartLineNumber, $erreur.Message }
+            $total += @($erreurs).Count
+          }
+          if ($total -gt 0) { exit 1 }
+      - name: Diagnostic (les 11 clés, une par ligne)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cles = 'systeme', 'architecture', 'memoire_go', 'gpu', 'disque_libre_go', 'port_8878', 'moteur', 'docker_desktop', 'lms', 'chiffrement_disque', 'palier_modele'
+          foreach ($ps in 'powershell', 'pwsh') {
+            "== $ps"
+            $lignes = @(& $ps -NoProfile -ExecutionPolicy Bypass -File install/diagnostic.ps1)
+            if ($LASTEXITCODE -ne 0) { "diagnostic.ps1 : code $LASTEXITCODE"; exit 1 }
+            $lignes
+            for ($i = 0; $i -lt $cles.Count; $i++) {
+              if (-not $lignes[$i].StartsWith($cles[$i] + '=')) { "Clé absente ou hors ordre : $($cles[$i])"; exit 1 }
+            }
+            $chiffrement = $lignes[9].Substring('chiffrement_disque='.Length)
+            if ($chiffrement -notin 'actif', 'inactif', 'inconnu') { "chiffrement_disque inattendu : $chiffrement"; exit 1 }
+          }
+      - name: Étape moteur en simulation (aucune modification)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          foreach ($ps in 'powershell', 'pwsh') {
+            "== $ps"
+            $sortie = @(& $ps -NoProfile -ExecutionPolicy Bypass -File install/installer.ps1 --etape moteur --simulation)
+            $sortie
+            if ($LASTEXITCODE -ne 0 -or $sortie[-1] -ne 'ETAPE moteur : OK') { exit 1 }
+          }
+      - name: Simulation de toutes les étapes et des autres scripts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $donnees = Join-Path $env:RUNNER_TEMP 'territoria-donnees-simulation'
+          $env:TERRITORIA_DONNEES_HOTE = $donnees
+          $etapes = 'moteur', 'lmstudio', 'secrets', 'legifrance', 'demarrer', 'n8n', 'demo', 'verifier', 'raccourci', 'sauvegarde-auto'
+          foreach ($ps in 'powershell', 'pwsh') {
+            foreach ($etape in $etapes) {
+              $sortie = @(& $ps -NoProfile -ExecutionPolicy Bypass -File install/installer.ps1 --etape $etape --simulation)
+              if ($LASTEXITCODE -ne 0 -or $sortie[-1] -ne "ETAPE $etape : OK") { $sortie; "$ps $etape : échec"; exit 1 }
+            }
+            foreach ($appel in @(
+              @('demarrer', '--ouvrir'), @('arreter'), @('sauvegarder', '--destination', $env:RUNNER_TEMP, '--auto'),
+              @('restaurer', '--archive', (Join-Path $env:RUNNER_TEMP 'territoria-20261030-123000.tsv1'), '--forcer'),
+              @('mettre-a-jour', '--version', 'HEAD'))) {
+              $nom = $appel[0]
+              $suite = @($appel | Select-Object -Skip 1)
+              $sortie = @(& $ps -NoProfile -ExecutionPolicy Bypass -File "install/$nom.ps1" @suite --simulation)
+              if ($LASTEXITCODE -ne 0 -or $sortie[-1] -ne "ETAPE $nom : OK") { $sortie; "$ps $nom : échec"; exit 1 }
+            }
+          }
+          if (Test-Path $donnees) { "La simulation a créé $donnees"; exit 1 }

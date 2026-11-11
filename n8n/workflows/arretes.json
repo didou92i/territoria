@@ -1,0 +1,249 @@
+{
+  "id": "TerritoriaArre01",
+  "name": "Territoria — rédaction d’arrêtés",
+  "nodes": [
+    {
+      "id": "207d5a95-b79f-4b87-a001-0320270c1f01",
+      "name": "Entrée du projet",
+      "webhookId": "b3c91e60-2f4d-4a57-9d18-0e7a5c4f8b92",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "territoria-arrete",
+        "authentication": "headerAuth",
+        "responseMode": "lastNode",
+        "responseData": "firstEntryJson",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaWebh01",
+          "name": "Territoria — entrée privée"
+        }
+      }
+    },
+    {
+      "id": "207d5a95-b79f-4b87-a001-0320270c1f02",
+      "name": "Recherche des exemples locaux",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/arretes/analyser",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "c1000003-a7e0-491a-9e00-000000000003",
+      "name": "Textes officiels datés",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/arretes/sources",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 120000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "c1000004-a7e0-491a-9e00-000000000004",
+      "name": "Vérification avant rédaction",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        780,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/arretes/preparer",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "207d5a95-b79f-4b87-a001-0320270c1f03",
+      "name": "Rédaction LM Studio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1040,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/llm/chat",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({request: $json.request, provider: $json.provider}) }}",
+        "options": {
+          "timeout": 600000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "207d5a95-b79f-4b87-a001-0320270c1f04",
+      "name": "Contrôle et document Word",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1300,
+        0
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://territoria:8878/api/arretes/finaliser",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({prepared: $('Vérification avant rédaction').first().json, completion: $json}) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "TerritoriaServ01",
+          "name": "Territoria — services internes"
+        }
+      }
+    },
+    {
+      "id": "arrete-chat-integration-note",
+      "name": "Rédaction depuis le chatbot",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        -290
+      ],
+      "parameters": {
+        "height": 220,
+        "width": 740,
+        "content": "## Arrêtés depuis le chatbot\nUne demande de rédaction dans Territoria déclenche ce workflow, même en mode « Avec sources ».\n\nLe modèle local rédige les considérants et les mesures. Le dernier nœud assemble tous les articles, le logo ajouté par l’utilisateur, l’aperçu complet et le Word. Le chatbot conserve le projet pour les demandes de modification.\n\nAucune signature ni publication automatique."
+      }
+    }
+  ],
+  "connections": {
+    "Entrée du projet": {
+      "main": [
+        [
+          {
+            "node": "Recherche des exemples locaux",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recherche des exemples locaux": {
+      "main": [
+        [
+          {
+            "node": "Textes officiels datés",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Textes officiels datés": {
+      "main": [
+        [
+          {
+            "node": "Vérification avant rédaction",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vérification avant rédaction": {
+      "main": [
+        [
+          {
+            "node": "Rédaction LM Studio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rédaction LM Studio": {
+      "main": [
+        [
+          {
+            "node": "Contrôle et document Word",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "none",
+    "saveDataSuccessExecution": "none",
+    "executionOrder": "v1"
+  }
+}

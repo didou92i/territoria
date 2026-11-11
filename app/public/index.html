@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: EUPL-1.2 -->
+<!-- SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731) -->
+<html lang="fr">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>TerritorIA — Votre espace de travail</title><link rel="icon" href="/favicon.png" type="image/png"><link rel="stylesheet" href="/styles.css"></head>
+<body>
+<svg class="svg-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+ <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10H3z"/><path d="M9 20v-6h6v6"/></symbol>
+ <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4 4"/></symbol>
+ <symbol id="i-chat" viewBox="0 0 24 24"><path d="M20.5 11.5c0 4-3.8 7-8.5 7-1.2 0-2.4-.2-3.4-.6L4 20l1.2-4C4.1 14.8 3.5 13.2 3.5 11.5c0-4 3.8-7 8.5-7s8.5 3 8.5 7Z"/></symbol>
+ <symbol id="i-box" viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.7 7.5 4.4 7.5-4.4M12 12v8.5"/></symbol>
+ <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5h6l2 2h10v9.8A1.7 1.7 0 0 1 19.3 20H4.7A1.7 1.7 0 0 1 3 18.3V6.5Z"/></symbol>
+ <symbol id="i-book" viewBox="0 0 24 24"><path d="M3 5.5c3.4-1 6.4-.7 9 1v13c-2.6-1.7-5.6-2-9-1v-13ZM21 5.5c-3.4-1-6.4-.7-9 1v13c2.6-1.7 5.6-2 9-1v-13Z"/></symbol>
+ <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+ <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+ <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+ <symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v5h4M9 12h6M9 16h6"/></symbol>
+ <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+ <symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></symbol><symbol id="i-up" viewBox="0 0 24 24"><path d="M7 10v11M7 10l4-7c1.5 0 2.5 1 2.5 2.5V9h5a2 2 0 0 1 2 2.3l-1.2 7.4A2.5 2.5 0 0 1 16.8 21H7M7 10H4v11h3"/></symbol><symbol id="i-down" viewBox="0 0 24 24"><path d="M17 14V3M17 14l-4 7c-1.5 0-2.5-1-2.5-2.5V15h-5a2 2 0 0 1-2-2.3l1.2-7.4A2.5 2.5 0 0 1 7.2 3H17M17 14h3V3h-3"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+ <symbol id="i-close" viewBox="0 0 24 24"><path d="M5 5l14 14M19 5 5 19"/></symbol>
+ <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+ <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 1.8 5.4L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.6L12 3ZM19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></symbol>
+ <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M4 16v4h16v-4"/></symbol>
+ <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+ <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M19 13v7H4V5h7"/></symbol>
+</svg>
+<div class="app-shell">
+ <aside class="sidebar" id="sidebar">
+  <a href="#accueil" class="brand" data-nav="home"><span class="brand-mark logo"><img src="/logo-tete.png" alt="" width="32" height="32"></span><span>Territor<span class="brand-blue">IA</span><small>VOTRE ESPACE PRIVÉ</small></span></a>
+  <nav aria-label="Navigation principale">
+   <div class="nav-group"><button class="nav-item active" data-nav="home"><svg><use href="#i-home"/></svg>Accueil</button><button class="nav-item" data-nav="search"><svg><use href="#i-search"/></svg>Recherche</button><button class="nav-item" data-nav="assistants"><svg><use href="#i-box"/></svg>Assistants</button><button class="nav-item" data-nav="arretes"><svg><use href="#i-file"/></svg>Arrêtés</button><button class="nav-item" data-nav="seances"><svg><use href="#i-clock"/></svg>Séances</button><button class="nav-item" data-nav="publication"><svg><use href="#i-file"/></svg>Publication</button><button class="nav-item" data-nav="spaces"><svg><use href="#i-folder"/></svg>Espaces</button><button class="nav-item" data-nav="fonds"><svg><use href="#i-book"/></svg>Fonds</button></div>
+   <div class="nav-divider"></div><div class="sidebar-heading">CONVERSATIONS <button class="icon-button small" data-action="new-chat" aria-label="Nouvelle conversation"><svg><use href="#i-plus"/></svg></button></div><div id="history" class="history"></div>
+  </nav>
+  <div class="sidebar-bottom"><button class="nav-item" data-nav="admin" id="nav-admin" hidden><svg><use href="#i-settings"/></svg>Administration</button><div class="local-pill"><span class="status-dot"></span>Votre espace privé</div><button class="profile" type="button" data-action="account" aria-label="Mon compte"><span class="avatar" id="profile-initiale">T</span><span><b id="profile-nom">Votre espace</b><small id="profile-role">Usage personnel</small></span></button><p class="credit">TerritorIA · © 2026 Rhiad AZZABI · licence EUPL 1.2</p></div>
+ </aside>
+ <main class="main"><div class="bandeau-demonstration" id="bandeau-demonstration" role="note" hidden>Démonstration : n'entrez aucune donnée réelle. Les textes sont envoyés à un service d'IA en ligne<span id="bandeau-fournisseur"></span>. Un essai en visiteur est effacé au bout de 24 heures. <a href="https://territoria.ovh" rel="noopener">Installer TerritorIA chez vous, avec l'IA en local</a></div><header class="topbar"><div class="topbar-title"><button class="menu-button icon-button" data-action="menu" aria-label="Ouvrir le menu" aria-controls="sidebar" aria-expanded="false"><svg><use href="#i-menu"/></svg></button><span id="page-icon"></span><span id="page-title">Accueil</span></div><div class="header-right"><span class="model-status" id="status"><span class="status-dot"></span> Vérification des services</span><button class="outline-btn new-chat" data-action="new-chat"><svg><use href="#i-plus"/></svg> Nouvelle conversation</button></div></header><div id="view" class="view"></div></main>
+</div>
+<div id="auth" class="auth" hidden></div>
+<dialog id="modal"><div id="modal-content"></div></dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/21st-components.js" defer></script>
+<script src="/app.js" defer></script>
+</body></html>
