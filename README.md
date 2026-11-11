@@ -1,5 +1,9 @@
 # TerritorIA
 
+> **Présentation en vidéo (2 minutes)** :
+> [télécharger le film](https://github.com/didou92i/territoria/releases/download/v0.2.0/territoria-presentation.mp4)
+> (MP4, 31 Mo, joint à la version 0.2.0).
+
 TerritorIA est une plateforme pour les agents de la fonction publique territoriale : rédiger des actes et documents
 administratifs (arrêtés, comptes rendus, notes), poser des questions sourcées sur des documents, utiliser des assistants
 métiers. Par défaut, elle fonctionne **entièrement en local**, parce que ces agents traitent des données personnelles
