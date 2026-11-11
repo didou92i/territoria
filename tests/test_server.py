@@ -150,6 +150,13 @@ class DocumentarySafetyTests(unittest.TestCase):
   self.assertEqual(result['artifact']['kind'],'arrete')
   self.assertIn('exemple fictif',result['answer'])
 
+ def test_un_nom_fictif_exemple_ne_produit_pas_l_exemple_de_stationnement(self):
+  with patch.object(app,'draft_arrete') as write,patch.object(app,'call_n8n') as answer:
+   result=app.chat({'question':'Rédige un arrêté accordant un permis de construire à Mme Camille Exemple, rue des Essais, Commune de Démoville','mode':'sources'})
+  write.assert_not_called();answer.assert_not_called()
+  self.assertEqual(result['artifact']['kind'],'arrete_clarification')
+  self.assertNotEqual(result['answer'],app.arrete_conversation.REPONSE_EXEMPLE)
+
  def test_une_deuxieme_demande_vague_obtient_un_exemple_et_non_la_meme_question(self):
   draft={'id':'a'*32,'download':'/api/arretes/'+'a'*32+'/file','articles':[{'role':'mesure','texte':'Le stationnement est interdit rue des Essais.'}],'examples':[]}
   with patch.object(app,'draft_arrete',return_value=draft) as write:

@@ -22,6 +22,19 @@ REPONSE_EXEMPLE=('Voici un exemple fictif d’arrêté : interdiction de station
                  'décrivez la mesure, le lieu, le motif et la période.')
 # « Par exemple » (repris des relances) et « de type » ne sont pas des demandes d'exemple.
 DEMANDE_EXEMPLE=re.compile(r'(?<!par )\b(?:exemples?|modeles?)\b|\barretes?\s+types?\b')
+# « Mme Camille Exemple », « M. Exemple », « Paul Exemple » : un nom fictif, pas une demande d'exemple. On le lit sur la
+# question telle qu'écrite, avant la mise en minuscules : une civilité, ou un prénom (mot à majuscule qui n'est pas un
+# déterminant) devant « Exemple ». « Un Exemple d'arrêté » et « UN EXEMPLE » restent des demandes d'exemple.
+_CIVILITE=r'(?:M\.|Mme|Mlle|Me|Dr|Monsieur|Madame|Mademoiselle|Maître)'
+_PRENOM=r"[A-ZÀ-Ý][a-zà-ÿ’'-]+"
+_DETERMINANTS=('Un','Une','Le','La','Les','Des','Du','Mon','Ma','Mes','Ton','Ta','Tes','Votre','Vos','Notre','Nos','Ce',
+               'Cet','Cette','Quel','Quelle','Autre','Bon','Petit','Nouvel','Nouveau','Simple')
+NOM_EXEMPLE=re.compile(rf"\b{_CIVILITE}\s+(?:{_PRENOM}\s+){{0,3}}(?i:exemples?)\b"
+                       rf"|\b(?!(?:{'|'.join(_DETERMINANTS)})\b){_PRENOM}\s+Exemples?\b")
+
+
+def _sans_nom_exemple(question):
+    return NOM_EXEMPLE.sub(' ',question)
 
 
 def _mots(texte):
@@ -102,7 +115,7 @@ def prepare(question,previous,data_dir):
     # Exemple demandé hors de la modification d'un projet, ou deuxième demande vague d'affilée : on rédige un exemple fictif
     # plutôt que de reposer une question. Après une demande déjà précise, seule une réponse brève (« un exemple ») le déclenche.
     bref=_mots(demande)<=5 and classify(demande)=='indetermine'
-    exemple=kind!='arrete' and DEMANDE_EXEMPLE.search(demande) and (vague or bref)
+    exemple=kind!='arrete' and DEMANDE_EXEMPLE.search(_plain(_sans_nom_exemple(question))) and (vague or bref)
     if exemple or (vague and kind=='arrete_clarification'):
         return {**data,'contexte':EXEMPLE,'collectivite':data['collectivite'] or 'Commune de Démoville'},''
     if vague:

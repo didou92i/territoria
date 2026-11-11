@@ -54,6 +54,38 @@ class DemandeVagueTests(unittest.TestCase):
                 self.assertIn('fictif', data['contexte'])
                 self.assertEqual(data['collectivite'], 'Commune de Démoville')
 
+    def test_la_demande_d_exemple_reste_reconnue_quelle_que_soit_la_casse(self):
+        # Garde-fou du traitement des noms propres : une majuscule seule ne fait pas d'« Exemple » un nom.
+        for demande in ('Exemple d\'arrêté stp', 'Rédige-moi un Exemple d\'arrêté', 'REDIGE MOI UN EXEMPLE D\'ARRETE',
+                        'Un Exemple d\'arrêté, s\'il vous plaît'):
+            with self.subTest(demande=demande):
+                data, clarification = arrete_conversation.prepare(demande, None, self.data)
+                self.assertEqual(clarification, '')
+                self.assertTrue(arrete_conversation.est_exemple(data))
+
+    def test_un_nom_de_famille_exemple_n_est_pas_une_demande_d_exemple(self):
+        # Les essais invitent à prendre des noms fictifs : « Mme Camille Exemple » doit être traité comme « Mme Camille Martin ».
+        modele = 'Rédige un arrêté accordant un permis de construire à {}, rue des Essais, Commune de Démoville'
+        attendu = arrete_conversation.prepare(modele.format('Mme Camille Martin'), None, self.data)
+        self.assertFalse(arrete_conversation.est_exemple(attendu[0]))
+        for nom in ('Mme Camille Exemple', 'M. Exemple', 'Madame Exemple', 'Monsieur Paul EXEMPLE', 'Paul Exemple'):
+            with self.subTest(nom=nom):
+                data, clarification = arrete_conversation.prepare(modele.format(nom), None, self.data)
+                self.assertFalse(arrete_conversation.est_exemple(data))
+                self.assertEqual(clarification, attendu[1])
+
+    def test_un_nom_exemple_en_tete_de_phrase_n_est_pas_une_demande_d_exemple(self):
+        data, _ = arrete_conversation.prepare('Camille Exemple souhaite un arrêté pour sa fête de quartier', None, self.data)
+        self.assertFalse(arrete_conversation.est_exemple(data))
+
+    def test_un_nom_exemple_en_reponse_breve_ne_remplace_pas_la_demande(self):
+        precedent = {'kind': 'arrete_clarification', 'inputs': {'contexte': SANS_COMMUNE, 'collectivite': ''}}
+        for reponse in ('Pour Mme Camille Exemple.', 'Paul Exemple'):
+            with self.subTest(reponse=reponse):
+                data, _ = arrete_conversation.prepare(reponse, precedent, self.data)
+                self.assertFalse(arrete_conversation.est_exemple(data))
+                self.assertIn('rue des Lilas', data['contexte'])
+
     def test_l_exemple_fictif_porte_la_collectivite_enregistree(self):
         branding.save(self.data, {'collectivite': 'Commune de Senlis', 'logo': ''})
         data, _ = arrete_conversation.prepare('redige moi un exemple d\'arreté', None, self.data)
