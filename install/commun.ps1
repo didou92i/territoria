@@ -388,6 +388,10 @@ function lancer {
 # CreateProcess. Ailleurs (les essais sous Linux), Start-Process recopie le fichier dans un tube après le démarrage et
 # lève « Broken pipe » si le programme s'est déjà terminé, alors qu'il a bien tourné : l'enfant y garde l'entrée de
 # l'appelant.
+# Hors Windows encore, Start-Process recopie aussi les sorties des tubes vers les fichiers de façon asynchrone, et
+# WaitForExit avec un délai n'attend pas la fin de cette recopie (qui n'arrive qu'à la fermeture des tubes, jamais tant
+# qu'un démon les garde) : lue aussitôt, la sortie pouvait manquer. La commande y écrit donc directement dans ses fichiers
+# (redirection par sh), comme sous Windows où l'enfant reçoit les poignées des fichiers.
 function lancer_detache {
     $mots = @($args | ForEach-Object { [string]$_ })
     if ($script:Simulation) {
@@ -399,20 +403,29 @@ function lancer_detache {
     $entree = [System.IO.Path]::GetTempFileName()
     $sortieFichier = [System.IO.Path]::GetTempFileName()
     $erreurFichier = [System.IO.Path]::GetTempFileName()
+    $fichiers = @($sortieFichier, $erreurFichier)
     try {
         $demarrage = @{
             FilePath = $chemin; PassThru = $true; NoNewWindow = $true
             RedirectStandardOutput = $sortieFichier; RedirectStandardError = $erreurFichier
         }
-        if ($script:EstWindows) { $demarrage['RedirectStandardInput'] = $entree }
-        if ($suite.Count -gt 0) { $demarrage['ArgumentList'] = (ligne_commande $suite) }
+        if ($script:EstWindows) {
+            $demarrage['RedirectStandardInput'] = $entree
+            if ($suite.Count -gt 0) { $demarrage['ArgumentList'] = (ligne_commande $suite) }
+        } else {
+            # Sorties de la commande, lues en premier ; celles de Start-Process ne gardent que les messages de sh.
+            $fichiers = @([System.IO.Path]::GetTempFileName(), [System.IO.Path]::GetTempFileName()) + $fichiers
+            $demarrage['FilePath'] = '/bin/sh'
+            $demarrage['ArgumentList'] = (ligne_commande (@('-c', 'f=$1; e=$2; shift 2; exec "$@" >"$f" 2>"$e"', 'sh',
+                $fichiers[0], $fichiers[1], $chemin) + $suite))
+        }
         $processus = Start-Process @demarrage
         $null = $processus.Handle  # sans lui, Windows PowerShell 5.1 ne retrouve pas le code de sortie
         if (-not $processus.WaitForExit(600000)) {
             try { $processus.Kill() } catch { $null = $_ }
             throw ('La commande {0} ne répond plus.' -f [System.IO.Path]::GetFileNameWithoutExtension($chemin))
         }
-        foreach ($fichier in @($sortieFichier, $erreurFichier)) {
+        foreach ($fichier in $fichiers) {
             $texte = [System.IO.File]::ReadAllText($fichier, $script:Utf8)
             if ($texte.Length -gt 0) { [Console]::Error.Write($texte) }
         }
@@ -420,7 +433,7 @@ function lancer_detache {
             throw ('La commande {0} a échoué (code {1}).' -f [System.IO.Path]::GetFileNameWithoutExtension($chemin), $processus.ExitCode)
         }
     } finally {
-        Remove-Item -LiteralPath $entree, $sortieFichier, $erreurFichier -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath (@($entree) + $fichiers) -Force -ErrorAction SilentlyContinue
     }
 }
 
