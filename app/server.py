@@ -14,7 +14,7 @@ import legal_sources
 import journal
 import llm_backend
 from config import REGLAGES
-from territoria import administration, arretes_delegations, arretes_police, arretes_rh, comptes, deliberations, registre, retours, semantique
+from territoria import administration, arretes_delegations, arretes_police, arretes_rh, comptes, deliberations, fonds_publics, registre, retours, semantique
 import arrete_document, branding
 from territoria.base import connexion, migrer
 from territoria.deliberations import ReponseInvalide
@@ -97,6 +97,7 @@ def init():
    payload=text.encode('utf-8'); path=FILES/'cgfp-l121-1.txt'; path.write_bytes(payload);os.chmod(path,0o600)
    c.execute('INSERT INTO documents VALUES (?,?,?,?,?,?,?,?)',('cgfp-l121-1','public','CGFP — article L121-1','cgfp-l121-1.txt',hashlib.sha256(payload).hexdigest(),'https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044427913/','2026-10-29',now()))
    c.execute('INSERT INTO chunks(doc_id,page,content) VALUES (?,?,?)',('cgfp-l121-1',None,text.strip()))
+  fonds_publics.verser(c,FILES,now(),split_page)  # articles de Légifrance livrés avec l'application
  os.chmod(DB,0o600)
  mettre_a_jour_assistants()
  appliquer_conservation()

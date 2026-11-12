@@ -1,0 +1,141 @@
+{
+ "as_of": "2026-11-12",
+ "origine": "Légifrance, version en vigueur consultée le 12/11/2026",
+ "sources": [
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-7",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-7\n\nLe conseil municipal se réunit au moins une fois par trimestre.\n\nLors du renouvellement général des conseils municipaux, la première réunion se tient de plein droit au plus tôt le vendredi et au plus tard le dimanche suivant le tour de scrutin à l'issue duquel le conseil a été élu au complet. Par dérogation aux dispositions de l'article L. 2121-12, dans les communes de 3 500 habitants et plus, la convocation est adressée aux membres du conseil municipal trois jours francs au moins avant celui de cette première réunion.\n\nLors de la première réunion du conseil municipal, immédiatement après l'élection du maire et des adjoints, le maire donne lecture de la charte de l'élu local mentionnée à l'article L. 1111-12. Le maire remet aux conseillers municipaux une copie de la charte de l'élu local et du chapitre III du présent titre.\n\nLe conseil municipal se réunit et délibère à la mairie de la commune. Il peut également se réunir et délibérer, à titre définitif, dans un autre lieu situé sur le territoire de la commune, dès lors que ce lieu ne contrevient pas au principe de neutralité, qu'il offre les conditions d'accessibilité et de sécurité nécessaires et qu'il permet d'assurer la publicité des séances.\n\nToutefois, dans une commune nouvelle régie par les dispositions du chapitre III du titre Ier du présent livre, le conseil municipal peut décider qu'une ou plusieurs de ses réunions auront lieu dans une ou plusieurs annexes de la mairie, sous réserve que, chaque année, au moins deux de ses réunions se tiennent à la mairie de la commune nouvelle. Le public est avisé de cette décision par tout moyen de publicité au choix du maire, au minimum quinze jours avant la tenue de ces réunions.",
+   "sha256": "2670a56db02f2bc4a09663a0a36358df385c8f27093ec97dad4a514cc2f9399f",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000053152323",
+   "version": {
+    "note": "Modifié par LOI n°2025-1249 du 22 décembre 2025 - art. 9",
+    "start": "2025-12-24"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000053152323"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-8",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-8\n\nDans les communes de 1 000 habitants et plus, le conseil municipal établit son règlement intérieur dans les six mois qui suivent son installation. Le règlement intérieur précédemment adopté continue à s'appliquer jusqu'à l'établissement du nouveau règlement.\n\nLe règlement intérieur peut être déféré au tribunal administratif.",
+   "sha256": "ca2e5098befe65d944f3ac4fc7b5b521d1fbf02428100b1dfc1e9e278965823a",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031038627",
+   "version": {
+    "note": "Modifié par LOI n° 2015-991 du 7 août 2015 - art. 123 ; Modifié par LOI n° 2015-991 du 7 août 2015 - art. 82",
+    "start": "2020-03-01"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000031038627"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-9",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-9\n\nLe maire peut réunir le conseil municipal chaque fois qu'il le juge utile.\n\nIl est tenu de le convoquer dans un délai maximal de trente jours quand la demande motivée lui en est faite par le représentant de l'Etat dans le département ou par le tiers au moins des membres du conseil municipal en exercice dans les communes de 1 000 habitants et plus et par la majorité des membres du conseil municipal dans les communes de moins de 1 000 habitants.\n\nEn cas d'urgence, le représentant de l'Etat dans le département peut abréger ce délai.",
+   "sha256": "deae323c69e727668467c796d820c10e08e07550c4baf28e830df623c96bc239",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031038624",
+   "version": {
+    "note": "Modifié par LOI n° 2015-991 du 7 août 2015 - art. 82",
+    "start": "2020-03-01"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000031038624"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-10",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-10\n\nToute convocation est faite par le maire. Elle indique les questions portées à l'ordre du jour. Elle est mentionnée au registre des délibérations, affichée ou publiée. Elle est transmise de manière dématérialisée ou, si les conseillers municipaux en font la demande, adressée par écrit à leur domicile ou à une autre adresse.",
+   "sha256": "134d1e3b8e46018dd18edb7157f60521dc2a8c48dc11aecef65ea0ac473f6cdb",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000041410274",
+   "version": {
+    "note": "Modifié par LOI n° 2019-1461 du 27 décembre 2019 - art. 9",
+    "start": "2019-12-29"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000041410274"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-11",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-11\n\nDans les communes de moins de 3 500 habitants, la convocation est adressée trois jours francs au moins avant celui de la réunion.\n\nEn cas d'urgence, le délai peut être abrégé par le maire, sans pouvoir être toutefois inférieur à un jour franc. Le maire en rend compte dès l'ouverture de la séance au conseil municipal qui se prononce sur l'urgence et peut décider le renvoi de la discussion, pour tout ou partie, à l'ordre du jour d'une séance ultérieure.",
+   "sha256": "d28d80917570d0af4f8a9f0ef78ddded8252318568000b1a1143979782f76469",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006389867",
+   "version": {
+    "note": "Création Loi 96-142 1996-02-21 jorf 24 février 1996",
+    "start": "1996-02-24"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000006389867"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-12",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-12\n\nDans les communes de 3 500 habitants et plus, une note explicative de synthèse sur les affaires soumises à délibération doit être adressée avec la convocation aux membres du conseil municipal.\n\nSi la délibération concerne un contrat de service public, le projet de contrat ou de marché accompagné de l'ensemble des pièces peut, à sa demande, être consulté à la mairie par tout conseiller municipal dans les conditions fixées par le règlement intérieur.\n\nLe délai de convocation est fixé à cinq jours francs. En cas d'urgence, le délai peut être abrégé par le maire sans pouvoir être toutefois inférieur à un jour franc.\n\nLe maire en rend compte dès l'ouverture de la séance au conseil municipal qui se prononce sur l'urgence et peut décider le renvoi de la discussion, pour tout ou partie, à l'ordre du jour d'une séance ultérieure.\n\nLe présent article est également applicable aux communes de moins de 3 500 habitants lorsqu'une délibération porte sur une installation mentionnée à l'article L. 511-1 du code de l'environnement.",
+   "sha256": "9208042494a03e5632a5bcda9124c53cc9d810e57da4c079ec4a4f1fc8901b81",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000031069083",
+   "version": {
+    "note": "Modifié par LOI n°2015-992 du 17 août 2015 - art. 142",
+    "start": "2015-08-19"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000031069083"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-15",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-15\n\nAu début de chacune de ses séances, le conseil municipal nomme un ou plusieurs de ses membres pour remplir les fonctions de secrétaire.\n\nIl peut adjoindre à ce ou ces secrétaires des auxiliaires, pris en dehors de ses membres, qui assistent aux séances mais sans participer aux délibérations.\n\nLe procès-verbal de chaque séance, rédigé par le ou les secrétaires, est arrêté au commencement de la séance suivante, et signé par le maire et le ou les secrétaires.\n\nIl contient la date et l'heure de la séance, les noms du président, des membres du conseil municipal présents ou représentés et du ou des secrétaires de séance, le quorum, l'ordre du jour de la séance, les délibérations adoptées et les rapports au vu desquels elles ont été adoptées, les demandes de scrutin particulier, le résultat des scrutins précisant, s'agissant des scrutins publics, le nom des votants et le sens de leur vote, et la teneur des discussions au cours de la séance.\n\nDans la semaine qui suit la séance au cours de laquelle il a été arrêté, le procès-verbal est publié sous forme électronique de manière permanente et gratuite sur le site internet de la commune, lorsqu'il existe, et un exemplaire sur papier est mis à la disposition du public.\n\nL'exemplaire original du procès-verbal, qu'il soit établi sur papier ou sur support numérique, est conservé dans des conditions propres à en assurer la pérennité.",
+   "sha256": "95351dc81904b0fbde6fb1642978b523b2b62cf6e483aa95ae479241dbfb8cfd",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044190488",
+   "version": {
+    "note": "Modifié par Ordonnance n°2021-1310 du 7 octobre 2021 - art. 1",
+    "start": "2022-07-01"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000044190488"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-18",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-18\n\nLes séances des conseils municipaux sont publiques.\n\nNéanmoins, sur la demande de trois membres ou du maire, le conseil municipal peut décider, sans débat, à la majorité absolue des membres présents ou représentés, qu'il se réunit à huis clos.\n\nSans préjudice des pouvoirs que le maire tient de l'article L. 2121-16, ces séances peuvent être retransmises par les moyens de communication audiovisuelle.",
+   "sha256": "0a2d41ba0bf18a914687e00837009ca40983f9d469d09264d0ecee51fc025cf5",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000006389876",
+   "version": {
+    "note": "Création Loi 96-142 1996-02-21 jorf 24 février 1996",
+    "start": "1996-02-24"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000006389876"
+  },
+  {
+   "code": "Code général des collectivités territoriales",
+   "article": "L2121-25",
+   "status": "ok",
+   "as_of": "2026-11-12",
+   "text": "L2121-25\n\nDans un délai d'une semaine, la liste des délibérations examinées par le conseil municipal est affichée à la mairie et mise en ligne sur le site internet de la commune, lorsqu'il existe.",
+   "sha256": "e3ce3c23ffd76e5ff1e7bd996579e6f66197a82d3750d352ffb881101891b6fd",
+   "url": "https://www.legifrance.gouv.fr/codes/article_lc/LEGIARTI000044190507",
+   "version": {
+    "note": "Modifié par Ordonnance n°2021-1310 du 7 octobre 2021 - art. 4",
+    "start": "2022-07-01"
+   },
+   "retrieved_at": "2026-11-12T18:00:00Z",
+   "id": "LEGIARTI000044190507"
+  }
+ ]
+}

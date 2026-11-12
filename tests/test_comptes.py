@@ -374,16 +374,17 @@ class IsolementTests(Base):
         self.assertNotIn('interne', [x['id'] for x in self.appel('GET', '/api/spaces', jeton=a)[1]])
         self.assertNotIn(self.document, [x['id'] for x in self.appel('GET', '/api/documents?space=all', jeton=a)[1]])
         self.assertEqual(self.appel('GET', '/api/documents?space=interne', jeton=a)[1], [])
-        self.assertEqual(self.appel('GET', '/api/search?q=archives+municipales+mardi', jeton=a)[1], [])
+        self.assertNotIn(self.document, [x['id'] for x in self.appel('GET', '/api/search?q=archives+municipales+mardi', jeton=a)[1]])
         self.assertEqual(self.appel('GET', '/api/search?q=archives+municipales+mardi&space=interne', jeton=a)[1], [])
         self.assertEqual(self.appel('GET', f'/api/documents/{self.document}/file', jeton=a)[0], 404)
         self.assertEqual(self.appel('DELETE', f'/api/documents/{self.document}', jeton=a)[0], 404)
         self.assertEqual(self.televerser(a, 'interne')[0], 404)
-        with patch.object(server, 'call_n8n') as modele:
+        with patch.object(server, 'call_n8n', return_value='Les extraits ne répondent pas à la question [1].') as modele:
             statut, reponse = self.appel('POST', '/api/chat', {'question': 'Quand ouvrent les archives municipales ?', 'space': 'all', 'mode': 'sources'}, a)
             self.assertEqual(self.appel('POST', '/api/chat', {'question': 'Archives ?', 'space': 'interne', 'mode': 'sources'}, a)[0], 400)
-        modele.assert_not_called()
-        self.assertEqual((statut, reponse['sources']), (200, []))
+        # seuls les textes du fonds public lui parviennent, et eux seuls partent au modèle
+        self.assertEqual((statut, {s['space'] for s in reponse['sources']}), (200, {'Fonds publics'}))
+        self.assertNotIn('mardi', str(modele.call_args_list))
         # le propriétaire, lui, trouve son document
         self.assertEqual(self.appel('GET', '/api/search?q=archives+municipales+mardi', jeton=self.admin)[1][0]['id'], self.document)
 
