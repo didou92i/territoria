@@ -24,6 +24,7 @@ import outils
 import reprise_pilote
 import sauvegarde
 import server
+from territoria import fonds_publics
 from config import REGLAGES
 
 REFERENCE = 'reference-stationnement-2023-13.pdf'
@@ -66,11 +67,14 @@ def pdf(texte):
     return sortie.getvalue()
 
 
-def initialiser(dossier):
-    """Base et documents d'une installation neuve : `server.init()` dans `dossier`."""
+def initialiser(dossier, articles_livres=True):
+    """Base et documents d'une installation neuve : `server.init()` dans `dossier`. Le pilote, lui, date d'avant le
+    versement des articles de Légifrance dans le fonds public (`articles_livres=False`)."""
     dossier = Path(dossier)
     with patch.object(server, 'DATA', dossier), patch.object(server, 'FILES', dossier / 'documents'), \
-            patch.object(server, 'DB', dossier / 'territoire.sqlite3'):
+            patch.object(server, 'DB', dossier / 'territoire.sqlite3'), contextlib.ExitStack() as pile:
+        if not articles_livres:
+            pile.enter_context(patch.object(fonds_publics, 'articles', return_value=()))
         server.init()
     gc.collect()  # `init()` laisse sa connexion ouverte jusqu'au ramasse-miettes : en WAL, elle garderait un -wal à côté de la base
 
@@ -134,7 +138,7 @@ def ecrire(chemin, contenu):
 def construire_pilote(pilote):
     """Faux dossier data/ du pilote : base `server.init()` avec une conversation, bibliothèque de deux PDF, modèle,
     ressources, arrêtés, identité, archives de déploiement, journal et configuration OpenRouter avec clé."""
-    initialiser(pilote)
+    initialiser(pilote, articles_livres=False)
     ajouter_conversation(pilote)
     ajouter_document(pilote)
     ecrire_bibliotheque(pilote)

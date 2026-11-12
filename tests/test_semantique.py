@@ -57,7 +57,7 @@ class SemantiqueTests(Base):
     def test_les_droits_s_appliquent_aussi_au_sens(self):
         while semantique.indexer(server.DB, server.DATA, 'faux-modele'):
             pass
-        self.assertEqual(server.search('règles sur les absences', 'all', espaces=['public']), [])
+        self.assertTrue(all(r['space'] == 'Fonds publics' for r in server.search('règles sur les absences', 'all', espaces=['public'])))
 
     def test_suppression_du_document_efface_ses_vecteurs(self):
         while semantique.indexer(server.DB, server.DATA, 'faux-modele'):

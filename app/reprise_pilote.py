@@ -47,6 +47,7 @@ import arretes
 import demo
 import sauvegarde
 from config import REGLAGES
+from territoria import fonds_publics
 
 BASE = 'territoire.sqlite3'
 ANNEXES_BASE = (BASE + '-wal', BASE + '-shm', BASE + '-journal')
@@ -58,7 +59,7 @@ TABLES = (('spaces', 'espaces'), ('documents', 'documents'), ('conversations', '
 REFERENCE = 'reference-stationnement-2023-13.pdf'
 REFERENCE_SHA256 = '41bda5d664a888019342c539a8e81692338bfd265d89c8df6806ca856b50d190'
 TRAME = 'stationnement-2023-13'
-# Ce que `server.init()` crée dans une base neuve.
+# Ce que `server.init()` crée dans une base neuve, avec les articles de Légifrance livrés (`fonds_publics.PREFIXE`).
 DOCUMENT_INITIAL = 'cgfp-l121-1'
 TAILLE_COPIE = 1024 * 1024
 
@@ -196,7 +197,8 @@ def _base_avec_donnees(base: Path) -> bool:
     un espace vide, et les espaces ne peuvent pas être supprimés. Tout document autre que celui de départ et toute
     conversation sont déjà comptés ci-dessous, ce qui couvre les espaces qu'ils référencent."""
     controles = (('conversations', 'SELECT 1 FROM conversations LIMIT 1', ()),
-                 ('documents', 'SELECT 1 FROM documents WHERE id != ? LIMIT 1', (DOCUMENT_INITIAL,)),
+                 ('documents', "SELECT 1 FROM documents WHERE id != ? AND substr(id, 1, ?) != ? LIMIT 1",
+                  (DOCUMENT_INITIAL, len(fonds_publics.PREFIXE), fonds_publics.PREFIXE)),
                  ('assistants', 'SELECT 1 FROM assistants WHERE custom != 0 LIMIT 1', ()))
     try:
         connexion = sqlite3.connect(f'{base.resolve().as_uri()}?mode=ro', uri=True, timeout=5)
