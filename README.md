@@ -1,9 +1,111 @@
 # TerritorIA
 
+<p align="center">
+  <img src="docs/images/banniere.png" width="860"
+       alt="TerritorIA, l'assistant des agents territoriaux. Libre, et installé chez vous.">
+</p>
+
+<p align="center">
+  <b>Rédiger les actes, répondre avec les sources, publier sans exposer personne.</b><br>
+  Un logiciel libre pour les collectivités, dont l'IA tourne par défaut sur votre propre machine.
+</p>
+
+<p align="center">
+  <a href="https://github.com/didou92i/territoria/releases/latest"><img alt="Version" src="https://img.shields.io/github/v/release/didou92i/territoria?label=version&color=3996d2"></a>
+  <a href="#licence-et-auteur"><img alt="Licence EUPL 1.2" src="https://img.shields.io/badge/licence-EUPL%201.2-8a4fb8"></a>
+  <a href="https://github.com/didou92i/territoria/actions/workflows/ci.yml"><img alt="Tests" src="https://github.com/didou92i/territoria/actions/workflows/ci.yml/badge.svg?branch=main"></a>
+  <img alt="IA locale par défaut" src="https://img.shields.io/badge/IA-locale%20par%20d%C3%A9faut-22b45a">
+</p>
+
+<p align="center">
+  <a href="https://github.com/didou92i/territoria/releases/download/v0.2.0/territoria-presentation.mp4"><b>Voir la vidéo (2 min)</b></a> ·
+  <a href="https://demo.territoria.ovh"><b>Essayer la démonstration</b></a> ·
+  <a href="#deux-façons-dinstaller"><b>Installer</b></a> ·
+  <a href="docs/guide-debutant.md"><b>Guide pour débutant</b></a> ·
+  <a href="https://territoria.ovh"><b>Site</b></a>
+</p>
+
 TerritorIA est une plateforme pour les agents de la fonction publique territoriale : rédiger des actes et documents
 administratifs (arrêtés, comptes rendus, notes), poser des questions sourcées sur des documents, utiliser des assistants
 métiers. Par défaut, elle fonctionne **entièrement en local**, parce que ces agents traitent des données personnelles
-et confidentielles :
+et confidentielles.
+
+## Aperçu
+
+<table>
+  <tr>
+    <td width="33%"><img src="docs/images/apercu-arrete.jpg" alt="Un projet d'arrêté rédigé dans TerritorIA, avec ses visas"></td>
+    <td width="33%"><img src="docs/images/apercu-question.jpg" alt="Une réponse de TerritorIA avec la source consultée"></td>
+    <td width="33%"><img src="docs/images/apercu-publication.jpg" alt="Les données personnelles repérées dans un acte avant sa publication"></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Un arrêté rédigé à partir d'une phrase</b><br>visas, considérants, articles, puis Word</td>
+    <td align="center"><b>Une réponse, avec sa source</b><br>le passage cité s'ouvre à la bonne page</td>
+    <td align="center"><b>Publier sans exposer personne</b><br>données personnelles repérées, masquage validé</td>
+  </tr>
+</table>
+
+Ces captures viennent de la démonstration en ligne : commune imaginaire, données fictives, IA en ligne (voir
+[`docs/demonstration.md`](docs/demonstration.md)). La [vidéo de présentation](https://github.com/didou92i/territoria/releases/download/v0.2.0/territoria-presentation.mp4)
+(2 minutes, MP4, 31 Mo, jointe à la version 0.2.0) montre le parcours complet.
+
+## Ce que fait TerritorIA
+
+| Pour… | TerritorIA… |
+| --- | --- |
+| **Rédiger un acte** | prépare arrêtés (police temporaire, RH, délégations, débit de boissons, stationnement, marchés, police générale) et délibérations, avec visas Légifrance et export Word au papier à en-tête. |
+| **Tenir le registre** | inscrit chaque acte au registre et lui attribue son numéro. |
+| **Publier un acte** | propose l'anonymisation, que vous validez, puis prépare le dossier à déposer sur le site : PDF, index et fichier national des délibérations (voir [`docs/publication.md`](docs/publication.md)). |
+| **Répondre à une question** | cherche dans vos documents et cite ses sources : OCR des PDF scannés, recherche par le sens. |
+| **Gagner du temps au quotidien** | met à disposition 22 assistants, dont réponse à un courrier et compte rendu de réunion. |
+| **Suivre les séances** | transcrit la séance (2 heures au plus) avec ses intervenants, puis rédige compte rendu, procès-verbal (mentions de l'article L2121-15 du CGCT) et liste des délibérations à partir de la transcription validée, au papier à en-tête. |
+| **Administrer** | gère comptes, rôles, droits par espace, connecteurs et retours des agents. |
+
+## Le parcours d'un acte
+
+TerritorIA rédige et contrôle ; vous décidez à chaque étape. En bleu, ce que fait le logiciel ; en vert, ce qui reste
+entre vos mains.
+
+```mermaid
+flowchart TB
+    subgraph rediger["1 · Rédiger"]
+        direction LR
+        A["Vous décrivez<br>la situation"]:::agent --> B["Projet rédigé :<br>visas, considérants, articles"]:::logiciel
+        B --> C["Visas contrôlés<br>sur Légifrance<br>(connecteur activé)"]:::logiciel
+        C --> D["Vous relisez,<br>corrigez, signez"]:::agent
+    end
+    subgraph publier["2 · Enregistrer et publier"]
+        direction LR
+        E["Numéro au registre,<br>Word à votre en-tête"]:::logiciel --> F["Données personnelles<br>repérées"]:::logiciel
+        F --> G["Vous validez<br>le masquage"]:::agent
+        G --> H["Dossier de publication :<br>PDF, index, fichier national"]:::logiciel
+    end
+    rediger --> publier
+    classDef logiciel fill:#3996d2,stroke:#2b78ab,color:#ffffff
+    classDef agent fill:#22b45a,stroke:#178a45,color:#ffffff
+    style rediger fill:#eef4fa,stroke:#c9d6e3,color:#1b2433
+    style publier fill:#eef4fa,stroke:#c9d6e3,color:#1b2433
+```
+
+## Comment ça marche : tout en local par défaut
+
+```mermaid
+flowchart TB
+    subgraph poste["Votre machine"]
+        N["Navigateur<br>127.0.0.1:8878"] --> T["TerritorIA<br>(conteneur)"]
+        T <-- "workflows, API interne" --> W["n8n<br>(conteneur, sans Internet)"]
+        T --> L["LM Studio<br>IA locale"]
+    end
+    T -. "connecteurs publics,<br>désactivés par défaut" .-> P["Légifrance (PISTE)<br>data.gouv.fr"]
+    T -. "option choisie<br>à l'installation" .-> M["API de Mistral"]
+    classDef dedans fill:#3996d2,stroke:#2b78ab,color:#ffffff
+    classDef dehors fill:#768093,stroke:#5c6575,color:#ffffff
+    class N,T,W,L dedans
+    class P,M dehors
+    style poste fill:#eef4fa,stroke:#c9d6e3,color:#1b2433
+```
+
+En une ligne :
 
 ```
 navigateur → TerritorIA (conteneur) → n8n (conteneur) → TerritorIA (API interne) → LM Studio (IA locale, sur la machine)
@@ -28,17 +130,11 @@ navigateur → TerritorIA (conteneur) → n8n (conteneur) → TerritorIA (API in
 - L'installation et les mises à jour téléchargent des images, un modèle d'IA et du code ; ces téléchargements ne
   transportent aucune donnée de la collectivité.
 
-**État** (novembre 2026 : version pilote 0.2.0 sur un poste) :
+## État du projet
 
-- **Fonctionne** : questions sourcées sur des documents (OCR des PDF scannés, recherche par le sens), 22 assistants
-  (dont réponse à un courrier et compte rendu de réunion), arrêtés (police temporaire, RH, délégations, débit de
-  boissons, stationnement, marchés, police générale) et délibérations avec visas Légifrance et export Word au papier
-  à en-tête, registre et numérotation des actes, publication des actes (anonymisation proposée puis validée, dossier
-  à déposer sur le site : PDF, index et fichier national des délibérations, voir [`docs/publication.md`](docs/publication.md)),
-  transcription des séances (2 heures au plus) avec intervenants,
-  compte rendu, procès-verbal (mentions de l'article L2121-15 du CGCT) et liste des délibérations rédigés à partir de
-  la transcription validée, au papier à en-tête, administration (comptes, rôles, droits par espace, connecteurs,
-  retours des agents).
+Novembre 2026 : version pilote 0.2.0, sur un poste.
+
+- **Fonctionne** : tout ce que décrit le tableau « Ce que fait TerritorIA » ci-dessus.
 - **Pas encore** : enregistrement en direct, courriers au papier à en-tête, mode équipe.
 - **Pilote** : [`docs/pilote.md`](docs/pilote.md).
 
