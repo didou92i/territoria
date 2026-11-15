@@ -24,6 +24,18 @@ class DocumentarySafetyTests(unittest.TestCase):
   app.add_doc('interne','arrete.txt','Le présent arrêté entre en vigueur dès sa publication.'.encode())
   resultats=app.search('Combien de jours de télétravail par semaine faut-il être présent ?','interne')
   self.assertEqual([r['title'] for r in resultats],['teletravail.txt'])
+ def test_un_seul_mot_commun_ne_suffit_pas_a_une_question_de_trois_mots(self):
+  app.add_doc('interne','conseil.txt','Le conseil se réunit dans un délai de cinq jours.'.encode())
+  self.assertEqual(app.search('Combien de jours de télétravail par semaine ?','interne'),[])
+  self.assertEqual([r['title'] for r in app.search('Le conseil se réunit dans quel délai ?','interne')],['conseil.txt'])
+ def test_une_question_d_un_ou_deux_mots_garde_le_passage_qui_en_partage_un(self):
+  app.add_doc('interne','deontologie.txt','L’agent exerce ses fonctions avec probité.'.encode())
+  self.assertEqual([r['title'] for r in app.search('Quelles sont les obligations de probité ?','interne')],['deontologie.txt'])
+  self.assertEqual([r['title'] for r in app.search('probité','interne')],['deontologie.txt'])
+ def test_les_mots_interrogatifs_et_auxiliaires_ne_font_pas_une_source(self):
+  app.add_doc('interne','seance.txt','Le maire réunit le conseil quand il le juge utile ; la séance doit être publique.'.encode())
+  self.assertEqual(app.search('Quand doit être rendu le rapport ?','interne'),[])
+  self.assertEqual(app.words('Pourquoi et quand mon dossier doit-il être complet ?'),['dossier','complet'])
  def test_no_relevant_source_means_no_model_call(self):
   with patch.object(app,'call_n8n') as call:
    answer=app.chat({'question':'photovoltaïque extraterrestre','space':'public','mode':'sources'})
