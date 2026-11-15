@@ -91,6 +91,31 @@ class VersementTests(unittest.TestCase):
         self.assertIn(f'{CGCT} — article L2121-12', [r['title'] for r in resultats])
         self.assertEqual(server.search('dignité intégrité probité')[0]['id'], 'cgfp-l121-1')
 
+    def test_une_question_sans_rapport_ne_trouve_aucune_source(self):
+        for question in ('Combien de jours de télétravail par semaine ?', 'Quand ouvrent les archives municipales ?',
+                         'Quel est le menu de la cantine scolaire cette semaine ?', 'Quelle est la recette de la tarte aux pommes ?',
+                         'Donne-moi une recette de cuisine', 'Comment inscrire mon enfant à la crèche ?',
+                         'Quand a lieu la collecte des encombrants ?', 'Combien de jours de congés pour un mariage ?'):
+            with self.subTest(question=question):
+                self.assertEqual([r['title'] for r in server.search(question, 'public')], [])
+
+    def test_une_question_en_rapport_garde_le_bon_article_en_tete(self):
+        fonction_publique = 'Code général de la fonction publique'
+        for question, attendu in (
+                ('Quel est le délai de convocation du conseil municipal ?', f'{CGCT} — article L2121-12'),
+                ('Quel est le quorum du conseil municipal ?', f'{CGCT} — article L2121-17'),
+                ('Le conseil municipal peut-il siéger à huis clos ?', f'{CGCT} — article L2121-18'),
+                ('Délégation de signature du maire au directeur général des services', f'{CGCT} — article L2122-19'),
+                ("Comment se passe la titularisation d'un stagiaire ?", f'{fonction_publique} — article R327-13'),
+                ('Comment se passe la titularisation ?', f'{fonction_publique} — article L327-3'),
+                ('Dans quel délai la liste des délibérations doit-elle être affichée à la mairie ?', f'{CGCT} — article L2121-25'),
+                ('Bonjour, je voudrais savoir si le conseil municipal peut se réunir à huis clos, merci', f'{CGCT} — article L2121-18')):
+            with self.subTest(question=question):
+                self.assertEqual(server.search(question, 'public')[0]['title'], attendu)
+        for question in ('Quelles obligations de probité et dignité ?', 'Quelles sont les obligations de probité ?'):
+            with self.subTest(question=question):
+                self.assertEqual(server.search(question, 'public')[0]['id'], 'cgfp-l121-1')
+
     def test_un_second_demarrage_ne_change_rien(self):
         avant = self.documents()
         with server.db() as c:

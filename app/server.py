@@ -73,7 +73,12 @@ CATEGORIES = {
  'Outils':('consignes-assistant',),
 }
 CATEGORIE={ident:nom for nom,idents in CATEGORIES.items() for ident in idents}
-STOP=set('les des une qui que pour dans avec cette ces sur est sont aux par plus sous vous nous leur leurs votre quel quelle quelles quels dans sans être comme aussi entre depuis peut elles ils elle il ses au du de la le et en un ou au il a à d l c n s se ce cela quelle faut faire comment tous toute tous tout quelles'.split())
+# Mots vides, écrits sans accent : `words` les compare après avoir retiré les accents (« être » s'y lit « etre »).
+STOP=set('les des une qui que pour dans avec cette ces sur est sont aux par plus sous vous nous leur leurs votre quel quelle quelles quels dans sans etre comme aussi entre depuis peut elles ils elle il ses au du de la le et en un ou au il a d l c n s se ce cela quelle faut faire comment tous toute tous tout quelles '
+         'quand combien pourquoi quoi lequel laquelle lesquels lesquelles '  # mots interrogatifs
+         'ont ete avoir doit doivent peuvent '                              # auxiliaires
+         'mon ton son mes tes nos vos notre cet moi toi lui eux '           # possessifs et pronoms
+         'pas mais donc car dont'.split())
 # Mots si fréquents dans un texte de service public qu'ils ne départagent pas deux passages : écartés d'une question qui a
 # d'autres mots, gardés quand la question n'est faite que d'eux (« agent public »).
 STOP_METIER=set('territorial territoriale publiques public publique agent agents'.split())
@@ -393,6 +398,10 @@ def verified_docs(rows):
   yield row
 
 SEUIL_PERTINENCE=0.5
+# Une question de trois mots ou plus : un passage doit en partager au moins deux. Un seul mot commun (« jours », « lieu »,
+# « municipale ») ne dit pas que le passage parle du sujet ; une question d'un ou deux mots garde le passage qui en partage un.
+MOTS_COMMUNS=2
+QUESTION_COURTE=2
 # Recherche par le sens (EmbeddingGemma, mesuré sur les documents de démonstration) : un passage pertinent dépasse 0,72,
 # un passage sans rapport reste sous 0,69 ; le seuil monte aussi au-dessus de la moyenne des extraits (autres modèles).
 SEUIL_SEMANTIQUE=0.70
@@ -442,10 +451,10 @@ def search(query,space='all',limit=6,espaces=None):
   sql='SELECT chunks.*,documents.name,documents.filename,documents.sha256,documents.source_url,documents.captured,documents.space_id,spaces.title AS space_title FROM chunks JOIN documents ON documents.id=chunks.doc_id JOIN spaces ON spaces.id=documents.space_id'
   if espaces is not None:rows=c.execute(sql+' WHERE documents.space_id IN ('+','.join('?'*len(espaces))+')',espaces).fetchall()
   else:rows=c.execute(sql+(' WHERE documents.space_id=?' if space!='all' else ''),((space,) if space!='all' else ())).fetchall()
- ranked=[]
+ ranked=[]; requis=MOTS_COMMUNS if len(terms)>QUESTION_COURTE else 1
  for row in rows:
   doc_terms=words(row['name']+' '+row['content'],metier); matches=terms.intersection(doc_terms)
-  if not matches:continue
+  if len(matches)<requis:continue
   score=sum(1+math.log(1+doc_terms.count(term)) for term in matches)/math.sqrt(max(1,len(doc_terms)/80))
   ranked.append((score,row))
  ranked.sort(key=lambda pair:pair[0],reverse=True)
