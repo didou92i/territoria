@@ -314,7 +314,9 @@ désactivés jusqu'à leur activation dans Administration › Connecteurs, où s
 Légifrance ; data.gouv.fr ne demande pas de compte. **Non** (réponse par défaut) : mode hors ligne
 (`TERRITORIA_HORS_LIGNE=1`), aucun connecteur ne peut être activé. Tant que Légifrance n'est pas actif, les visas des
 actes viennent de la copie datée des textes livrée avec TerritorIA (ou du dernier cache), et l'acte rédigé demande de
-vérifier qu'ils sont toujours en vigueur. L'étape retire de `secrets/territoria.env` les identifiants PISTE qu'une
+vérifier qu'ils sont toujours en vigueur. Cette copie datée est aussi versée, au démarrage, dans l'espace « Fonds
+publics », avec les articles sur le fonctionnement du conseil municipal : les questions avec sources y trouvent de quoi
+répondre dès l'installation. Un article que vous supprimez de ce fonds n'y revient pas. L'étape retire de `secrets/territoria.env` les identifiants PISTE qu'une
 version précédente y rangeait et que plus rien ne lit : ressaisissez-les dans Administration › Connecteurs. Étape
 interactive, à lancer dans un terminal ; relancez-la pour changer d'avis, puis relancez TerritorIA.
 

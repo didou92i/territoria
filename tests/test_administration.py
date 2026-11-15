@@ -17,7 +17,7 @@ import config
 import llm_backend
 import server
 import web
-from territoria import administration
+from territoria import administration, fonds_publics
 from territoria.base import migrer
 
 ORIGINE = 'http://127.0.0.1:9001'
@@ -266,7 +266,7 @@ class SanteTests(Base):
         with patch.object(llm_backend, 'etat_lmstudio', return_value=ia), patch.object(web, '_statut', return_value={'lm': True, 'n8n': True}):
             statut, sante = self.appel('GET', '/api/admin/sante')
         self.assertEqual(statut, 200)
-        self.assertEqual(sante['comptes']['documents'], 1)  # l'article du CGFP livré au démarrage
+        self.assertEqual(sante['comptes']['documents'], 1 + len(fonds_publics.articles()))  # les articles livrés au démarrage
         self.assertEqual(sante['version_base'], 15)
         self.assertEqual((sante['services'], sante['ia']['actif']['contexte']), ({'lm': True, 'n8n': True}, 8192))
         self.assertGreater(sante['disque']['total'], 0)

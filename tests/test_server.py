@@ -18,7 +18,7 @@ class DocumentarySafetyTests(unittest.TestCase):
  def test_space_search_is_isolated(self):
   app.add_doc('interne','reglement.txt','Stationnement des vélos municipaux : accès réservé au personnel.'.encode())
   self.assertTrue(app.search('stationnement vélos','interne'))
-  self.assertEqual(app.search('stationnement vélos','public'),[])
+  self.assertNotIn('reglement.txt',[r['title'] for r in app.search('stationnement vélos','public')])  # le fonds public a ses propres textes
  def test_un_passage_qui_ne_partage_qu_un_mot_courant_n_est_pas_une_source(self):
   app.add_doc('interne','teletravail.txt','Le télétravail est autorisé deux jours par semaine ; le mercredi, chaque agent est présent.'.encode())
   app.add_doc('interne','arrete.txt','Le présent arrêté entre en vigueur dès sa publication.'.encode())
