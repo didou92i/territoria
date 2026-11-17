@@ -35,9 +35,11 @@ def ia_qui_trouve(*noms):
     return patch.object(llm_backend, 'chat', return_value={'choices': [{'message': {'content': json.dumps(reponse)}}]})
 
 
-def docx(*paragraphes):
+def docx(*paragraphes, entete=None):
     from docx import Document
     document = Document()
+    if entete:
+        document.sections[0].header.paragraphs[0].text = entete
     for p in paragraphes:
         document.add_paragraph(p)
     sortie = io.BytesIO()
@@ -53,15 +55,20 @@ class PublicationWebTests(Base):
         self.agent_id, self.agent = self.creer(self.admin, 'agent')
         branding.save(server.DATA, {'collectivite': 'Commune de Démoville', 'siret': '21860194600013'})
 
-    def acte_du_registre(self):
+    def acte_du_registre(self, version_signee=None):
         ident = 'a' * 32
         (server.DATA / 'arretes').mkdir(exist_ok=True)
-        document = arrete_document.assemble({'collectivite': 'Commune de Démoville'},
-                                            {'objet': 'Stationnement pour un déménagement',
-                                             'considerant': 'Considérant la demande de M. Jean Martin, 12 rue des Lilas.',
-                                             'articles': [], 'destinataires': 'Services compétents'})
-        arrete_document.create_word(server.DATA / 'arretes' / f'{ident}.docx', document)
-        return registre.attribuer(server.DB, ident, 'arrete', 'Stationnement pour un déménagement')
+        objet = 'Stationnement pour un déménagement'
+        numero = registre.attribuer(server.DB, ident, 'arrete', objet)
+        chemin = server.DATA / 'arretes' / f'{ident}.docx'
+        if version_signee:
+            chemin.write_bytes(version_signee)
+        else:
+            document = arrete_document.assemble({'collectivite': 'Commune de Démoville', 'numero': numero},
+                                                {'objet': objet, 'considerant': 'Considérant la demande de M. Jean Martin.',
+                                                 'articles': [], 'destinataires': 'Services compétents'})
+            arrete_document.create_word(chemin, document)
+        return numero
 
     def deposer(self, jeton, contenu, nom='acte.docx', **champs):
         champs = {'type': 'deliberation', 'numero': 'D2026-012', 'date_acte': '2026-10-14', 'objet': 'Cession d’un terrain',
@@ -71,7 +78,8 @@ class PublicationWebTests(Base):
         return self.appel('POST', f'/api/publications/depot?{requete}', contenu, jeton, entetes)
 
     def test_parcours_complet_referent(self):
-        numero = self.acte_du_registre()
+        numero = self.acte_du_registre(docx('Vu la demande de M. Jean Martin, 12 rue des Lilas.',
+                                            'Article 1. Le stationnement est interdit.', 'Signé le 14 octobre 2026.'))
         statut, acte = self.appel('POST', '/api/publications', {'registre': numero, 'date_acte': '2026-10-14'}, self.referent)
         self.assertEqual((statut, acte['statut'], acte['source']), (201, 'a_relire', 'registre'))
         with ia_qui_trouve('Jean Martin'):
@@ -92,6 +100,52 @@ class PublicationWebTests(Base):
         self.assertEqual(len(lu['empreinte_pdf']), 64)
         statut, publie = self.appel('POST', f'/api/publications/{acte["id"]}/en-ligne', {'date': aujourdhui()}, self.referent)
         self.assertEqual((statut, publie['statut'], publie['publie_le']), (200, 'publie', aujourdhui()))
+
+    def test_projet_numerote_refuse_et_depot_de_la_version_signee(self):
+        numero = self.acte_du_registre()
+        statut, corps = self.appel('POST', '/api/publications', {'registre': numero}, self.referent)
+        self.assertEqual(statut, 400)
+        self.assertIn('La version signée', corps['error'])
+        self.assertEqual(self.appel('GET', '/api/publications', jeton=self.referent)[1]['publications'], [])
+        statut, _ = self.deposer(self.referent, docx('Le projet — non signé en annexe [1] — est remplacé.', 'Signé le 14 octobre 2026.'), numero=numero, type='arrete')
+        self.assertEqual(statut, 201)
+
+    def test_depot_refuse_chaque_indice_explicite_de_projet(self):
+        fichiers = (docx('Vu la demande du [à compléter].'), docx('Fait le [date de signature].'),
+                    docx('Le Maire, [nom et signature]'), docx('DÉCIDE', entete='PROJET — NON SIGNÉ'))
+        for i, fichier in enumerate(fichiers):
+            with self.subTest(cas=i):
+                statut, corps = self.deposer(self.agent, fichier, numero=f'A{i}')
+                self.assertEqual(statut, 400)
+                self.assertIn('La version signée', corps['error'])
+
+    def test_depot_pdf_refuse_le_bandeau_avant_regroupement_des_lignes(self):
+        from reportlab.pdfgen import canvas
+        sortie = io.BytesIO()
+        page = canvas.Canvas(sortie)
+        for i, ligne in enumerate(('COMMUNE', 'PROJET — NON SIGNÉ', 'Article 1.')):
+            page.drawString(40, 800 - 25 * i, ligne)
+        page.save()
+        statut, corps = self.deposer(self.agent, sortie.getvalue(), nom='acte.pdf')
+        self.assertEqual(statut, 400)
+        self.assertIn('La version signée', corps['error'])
+
+    def test_ancienne_fiche_incomplete_meme_validee_reste_bloquee(self):
+        statut, acte = self.deposer(self.referent, docx('Arrêté signé.'))
+        self.assertEqual(statut, 201)
+        ident = acte['id']
+        with ia_qui_trouve():
+            self.appel('POST', f'/api/publications/{ident}/reperer', {}, self.referent)
+        self.assertEqual(self.appel('POST', f'/api/publications/{ident}/valider', {}, self.referent)[0], 200)
+        self.assertEqual(self.appel('POST', '/api/publications/dossier', {'ids': [ident]}, self.referent)[0], 200)
+        # Reconstitue les données conservées par l'ancienne version, y compris l'empreinte d'un ZIP déjà préparé.
+        texte = server.DATA / 'publication' / ident / 'texte.json'
+        texte.write_text(json.dumps(['Fait le [date de signature].']), encoding='utf-8')
+        for route, params in ((f'{ident}/valider', {}), ('dossier', {'ids': [ident]}), (f'{ident}/en-ligne', {})):
+            with self.subTest(route=route):
+                statut, corps = self.appel('POST', '/api/publications/' + route, params, self.referent)
+                self.assertEqual(statut, 400)
+                self.assertIn('La version signée', corps['error'])
 
     def test_agent_ne_valide_pas(self):
         statut, acte = self.deposer(self.agent, docx('Le conseil municipal,', 'Vu la demande de M. Jean Martin ;'))
