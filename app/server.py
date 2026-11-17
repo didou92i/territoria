@@ -627,8 +627,8 @@ def draft_deliberation(donnees):
  document=deliberations.assembler(donnees,genere,sources,branding.for_document(DATA,donnees.get('collectivite','')))
  cites=[a for a in deliberations.theme(donnees['contexte'])[2]+('L2121-17','L2121-20','L2121-23','L2131-1','R421-1') if a in sources]
  return _enregistrer_acte(document,genere,sources,cites,
-  ['Compléter les éléments de séance : date, convocation, présents, pouvoirs, président et secrétaire de séance, résultat du vote.'],
-  'Projet non adopté. Les éléments de séance, le vote, la compétence et les textes particuliers restent à compléter et à vérifier.','la séance')
+  ['Vérifier les éléments de séance saisis et compléter les champs manquants.'],
+  'Projet non adopté. Vérifier les éléments de séance, le vote, la compétence et les textes particuliers.','la séance')
 
 def draft_arrete_rh(donnees):
  """Projet d'arrêté individuel sur la carrière d'un fonctionnaire : même partage que pour une délibération."""
@@ -744,7 +744,7 @@ def chat(payload,utilisateur='',espaces=None):
   if clarification:
    return save_chat(conv,question,clarification,[],mode,space,aid,{'kind':'deliberation_clarification','inputs':donnees},False,utilisateur)
   resultat=draft_deliberation(donnees)
-  answer='Votre projet de délibération est rédigé ci-dessous. Complétez les éléments de séance, demandez une modification dans cette conversation ou téléchargez le Word.'
+  answer='Votre projet de délibération est rédigé ci-dessous. Vérifiez les éléments de séance, demandez une modification dans cette conversation ou téléchargez le Word.'
   return save_chat(conv,question,answer,sources_acte(resultat,deliberations.textes(DATA,True)),mode,space,aid,{**resultat,'kind':'deliberation','inputs':donnees},True,utilisateur)
  for module,genre,rediger,answer in ARRETES_TRAMES:
   if question_acte and module.est_demande(question_acte,previous,aid):
