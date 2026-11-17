@@ -153,8 +153,13 @@ class ConversationTests(Base):
         with patch.object(llm_backend, 'chat', return_value=completion()):
             statut, premiere = self.appel('POST', '/api/chat', {'question': TRAVAUX, 'mode': 'libre'})
         self.assertEqual(statut, 200)
+        with patch.object(server, 'call_n8n', return_value='Le projet indique la période des travaux.') as expliquer:
+            statut, lecture = self.appel('POST', '/api/chat', {'question': 'Pouvez-vous expliquer la période des travaux ?',
+                                         'assistant': 'arrete', 'mode': 'libre', 'conversation': premiere['conversation']})
+        self.assertEqual((statut, lecture['answer']), (200, 'Le projet indique la période des travaux.'))
+        self.assertIn(premiere['artifact']['document']['articles'][0]['texte'], expliquer.call_args.args[0][-1]['content'])
         with patch.object(llm_backend, 'chat', return_value=completion()) as chat:
-            statut, seconde = self.appel('POST', '/api/chat', {'question': 'Ajoute que l’accès à la boulangerie du n° 12 reste possible.',
+            statut, seconde = self.appel('POST', '/api/chat', {'question': 'Peux-tu ajouter que l’accès à la boulangerie du n° 12 reste possible ?',
                                                                'mode': 'libre', 'conversation': premiere['conversation']})
         self.assertEqual(statut, 200)
         requete = chat.call_args.args[1]

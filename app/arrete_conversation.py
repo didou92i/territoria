@@ -72,7 +72,25 @@ def sans_repetition(texte,precedent,data):
     return next(c for c in candidats if c.strip()!=texte.strip())
 
 
+def demande_acte(question,assistant=''):
+    """Texte pour le routage : une demande polie peut finir par « ? », une question de lecture ne rédige rien."""
+    texte=_plain(question).strip()
+    invitation=r"(?:(?:peux[- ]tu|pouvez[- ]vous|pourrais[- ]tu|pourriez[- ]vous|tu peux|vous pouvez)\s+(?:m[’']aider\s+a\s+)?|merci\s+de\s+)?"
+    action=r'(?:(?:redig|prepar|cree|gener|ecri|propos|etabli|modifi|ajout|corrig|prolong|decal|remplac|supprim|retir|chang|refai)\w*|fais|faites|faire)'
+    consigne=re.match(invitation+action+r'\b',texte)
+    if assistant=='compte-rendu':
+        # Une action à préparer mentionnée dans les notes ne remplace pas la commande donnée à l'assistant.
+        if not consigne or not re.match(r"(?:[- ](?:moi|nous))?\s+(?:(?:le|la|un|une)\s+)?(?:projet\s+d[eu’' ]+)?(?:arrete|deliberation)\b",texte[consigne.end():]):
+            return ''
+    if consigne:return question.rstrip().rstrip('?').rstrip()
+    if '?' in texte or re.match(r"(?:(?:de|a|sur|dans|pour)\s+)?(?:quel\w*|qui|que|quoi|pourquoi|comment|quand|explique\w*)\b|qu[’']est-ce",texte):
+        return ''
+    return question
+
+
 def is_drafting(question,previous=None,assistant=''):
+    question=demande_acte(question,assistant)
+    if not question:return False
     text=_plain(question)
     if previous and previous.get('kind')=='arrete_clarification':return True
     modifying=r'\b(modifi\w*|remplac\w*|ajout\w*|retir\w*|corrig\w*|decal\w*|prolong\w*|chang\w*|precis\w*|regroup\w*|reuni\w*|plutot|regenere\w*|refai\w*)\b'

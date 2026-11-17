@@ -207,4 +207,53 @@ class DocumentarySafetyTests(unittest.TestCase):
   self.assertIn('rue des Lilas',inputs['contexte']);self.assertIn('11 janvier 2027',inputs['contexte'])
   self.assertEqual(inputs['collectivite'],'Commune de Senlis')
 
+ def test_question_sur_le_projet_puis_reprise_de_la_modification(self):
+  demande='Rédige un arrêté pour la ville de Senlis interdisant le stationnement rue des Lilas le 10 janvier 2027.'
+  visa='Vu la délibération du conseil du [date à compléter]'
+  projet={'id':'a'*32,'document':{'objet':'Stationnement des véhicules','visas':[visa]},'examples':[]}
+  with patch.object(app,'draft_arrete',return_value=projet) as rediger,patch.object(app,'call_n8n',return_value='La date reste à compléter.') as expliquer:
+   payload={'assistant':'arrete','mode':'libre'}
+   premier=app.chat({**payload,'question':demande})
+   payload['conversation']=premier['conversation']
+   for question in ('Je ne suis pas juriste : de quelle délibération parlez-vous ?', 'Pouvez-vous expliquer ce visa ?'):
+    reponse=app.chat({**payload,'question':question})
+    self.assertEqual(reponse['answer'],'La date reste à compléter.')
+    self.assertNotIn('document',reponse['artifact'])
+    self.assertIn(visa,' '.join(m['content'] for m in expliquer.call_args.args[0]))
+   rediger.assert_called_once()
+   app.chat({**payload,'question':'Pouvez-vous remplacer le 10 janvier par le 11 janvier ?'})
+   self.assertEqual(rediger.call_count,2)
+   donnees=rediger.call_args.args[0]
+   self.assertIn(demande,donnees['contexte'])
+   self.assertIn('11 janvier',donnees['contexte'])
+   self.assertNotIn('juriste',donnees['contexte'])
+
+ def test_question_en_mode_sources_distingue_le_projet_des_sources(self):
+  visa='Vu la délibération du [date à compléter]'
+  projet={'id':'a'*32,'document':{'visas':[visa]},'examples':[]}
+  payload={'assistant':'arrete','mode':'sources','space':'interne'}
+  with patch.object(app,'draft_arrete',return_value=projet) as rediger,patch.object(app,'call_n8n') as expliquer:
+   premier=app.chat({**payload,'question':'Rédige un arrêté pour la ville de Senlis interdisant le stationnement rue des Lilas.'})
+   question='Quelle délibération faut-il viser ?'
+   reponse=app.chat({**payload,'conversation':premier['conversation'],'question':question})
+   self.assertIn(visa,reponse['answer'])
+   self.assertEqual(reponse['sources'],[])
+   expliquer.assert_not_called()
+   rediger.assert_called_once()
+
+ def test_les_actions_des_notes_de_reunion_restent_dans_le_compte_rendu(self):
+  with patch.object(app,'draft_arrete') as rediger,patch.object(app,'call_n8n',return_value='Actions de la réunion.') as ecrire:
+   reponse=app.chat({'assistant':'compte-rendu','mode':'libre','question':
+    'Notes de réunion pour le marché : éclairage à vérifier ; arrêté de circulation place de la Fontaine à faire préparer.'})
+   self.assertEqual(reponse['answer'],'Actions de la réunion.')
+   self.assertIn('compte rendu',ecrire.call_args.args[0][0]['content'])
+   rediger.assert_not_called()
+
+ def test_une_demande_explicite_d_arrete_depuis_le_compte_rendu_reste_reconnue(self):
+  with patch.object(app,'draft_arrete',return_value={'examples':[]}) as rediger:
+   reponse=app.chat({'assistant':'compte-rendu','mode':'libre','question':
+    'Peux-tu rédiger un arrêté pour la ville de Senlis interdisant le stationnement rue des Lilas ?'})
+  self.assertEqual(reponse['artifact']['kind'],'arrete')
+  rediger.assert_called_once()
+
 if __name__=='__main__':unittest.main()
