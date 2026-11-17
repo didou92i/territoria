@@ -20,6 +20,8 @@ import re
 import unicodedata
 from pathlib import Path
 
+from .collectivites import collectivite, lieu_communal
+
 REFERENCE = Path(__file__).resolve().parent / 'ressources' / 'deliberations-reference.json'
 CGCT = 'Code général des collectivités territoriales'
 A_COMPLETER = '[à compléter]'
@@ -158,17 +160,6 @@ def est_demande(question: str, precedent=None, assistant: str = '') -> bool:
     verbe = re.search(r'\b(redig\w*|prepar\w*|propos\w*|ecri\w*|gener\w*|fai[st]?|faire|etabli\w*)\b', texte)
     titre = re.match(r'\s*(projet\s+de\s+)?deliberation\s+(pour|portant|relative|concernant|autorisant|approuvant|fixant|attribuant|creant|sur)\b', texte)
     return bool((indefinie and verbe) or titre)
-
-
-def collectivite(question: str) -> str:
-    # Le genre, avec ou sans majuscule (« Commune de Senlis ») ; le nom, avec sa majuscule.
-    m = re.search(r'\b((?i:commune|ville|mairie|communaut[ée] de communes|communaut[ée] d[’\']agglom[ée]ration))\s+(?:de\s+|d[’\'])?'
-                  r'([A-ZÀ-Ý][^,;:\n?.!()]{1,60})', question)
-    if not m:
-        return ''
-    nom = re.split(r'\s+(?:pour|portant|relative?|concernant|afin|sur|avec|du|le|la|les|lors)\b', m.group(2), maxsplit=1)[0].strip()
-    genre = m.group(1).lower()
-    return ('Commune de ' if genre in ('commune', 'ville', 'mairie') else genre[0].upper() + genre[1:] + ' de ') + nom
 
 
 def preparer(question: str, precedent, collectivite_enregistree: str) -> tuple[dict, str]:
@@ -343,7 +334,7 @@ def assembler(donnees: dict, genere: dict, sources: dict, logo=None) -> dict:
     communal = not re.search(r'\b(communaute|agglomeration|metropole|syndicat)\b', simple)
     conseil = 'conseil municipal' if communal else 'conseil communautaire'
     president = 'Le Maire' if communal else 'Le Président'
-    lieu = re.sub(r'^(commune|ville|mairie)\s+(de\s+|d[’\']\s*)', '', collectivite_nom, flags=re.IGNORECASE) if communal else ''
+    lieu = (lieu_communal(collectivite_nom) or collectivite_nom) if communal else ''
     decisions = [{'role': 'decision', 'title': '', 'texte': t} for t in genere['decisions']]
     fixes = [{'role': 'execution', 'title': 'Exécution',
               'texte': f'{president} est chargé de l’exécution de la présente délibération.'}]

@@ -16,6 +16,7 @@ import re
 from pathlib import Path
 
 from . import deliberations
+from .collectivites import lieu_communal
 from .deliberations import REDACTION_MAX, ReferenceInventee, _plain, _visas, collectivite, lire, valeurs_donnees  # noqa: F401 (réexportés)
 
 REFERENCE = Path(__file__).resolve().parent / 'ressources' / 'arretes-rh-reference.json'
@@ -156,9 +157,10 @@ def requete(donnees: dict, modele: str, sources: dict) -> dict:
 
 def _autorite(nom_collectivite: str) -> tuple[str, str, str]:
     """(formule d'autorité, titre court, lieu) : « Le Maire de la commune de Démoville », « Le Maire », « Démoville »."""
-    m = re.match(r'\s*(commune|ville|mairie)\s+(de\s+|d[’\']\s*)(\S.*)', nom_collectivite, re.IGNORECASE)
-    if m:
-        return 'Le Maire de la commune ' + m.group(2).lower() + m.group(3).strip(), 'Le Maire', m.group(3).strip()
+    lieu = lieu_communal(nom_collectivite)
+    if lieu:
+        suite = nom_collectivite.strip().split(None, 1)[1]
+        return 'Le Maire de la commune ' + suite[0].lower() + suite[1:], 'Le Maire', lieu
     if re.search(r'\b(communaute|agglomeration|metropole|syndicat)\b', _plain(nom_collectivite)):
         return 'Le Président de la ' + nom_collectivite[0].lower() + nom_collectivite[1:], 'Le Président', ''
     return 'Le Maire', 'Le Maire', ''
