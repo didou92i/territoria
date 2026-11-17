@@ -5,7 +5,7 @@
 Le modèle local ne rédige que l'objet, les considérants et les décisions. Tout le reste est fixe et vient de textes
 officiels relevés sur Légifrance (copie datée `ressources/deliberations-reference.json`, empreintes vérifiées) :
 - les visas, choisis par thème à partir de mots-clés (jamais par le modèle) ;
-- le préambule de séance (convocation, quorum de l'article L2121-17, présents, pouvoirs), laissé à compléter ;
+- le préambule de séance (convocation, quorum de l'article L2121-17, présents, pouvoirs), renseigné à partir des données de l’agent ;
 - la mention du vote (majorité absolue des suffrages exprimés, article L2121-20) ;
 - l'exécution, la publicité et le caractère exécutoire (L2131-1), les voies de recours (R421-1 du CJA) ;
 - les signatures du maire et du secrétaire de séance (L2121-23).
@@ -20,6 +20,7 @@ import re
 import unicodedata
 from pathlib import Path
 
+from . import deliberations_seance
 from .collectivites import collectivite, lieu_communal
 
 REFERENCE = Path(__file__).resolve().parent / 'ressources' / 'deliberations-reference.json'
@@ -170,8 +171,12 @@ def preparer(question: str, precedent, collectivite_enregistree: str) -> tuple[d
     else:
         contexte = question
     donnees = {'contexte': contexte[:6000], 'collectivite': collectivite(question) or anterieures.get('collectivite') or collectivite_enregistree}
-    seance = re.search(r'\bs[ée]ance\s+du\s+(\d{1,2}(?:er)?\s+\w+\s+\d{4})', contexte, re.IGNORECASE)
-    donnees['seance'] = seance.group(1) if seance else anterieures.get('seance', '')
+    # Les projets enregistrés avant la prise en compte des effectifs n'ont que le contexte.
+    mentions = anterieures.get('mentions_seance')
+    if mentions is None:
+        mentions = deliberations_seance.relever(anterieures.get('contexte', ''))
+    donnees['mentions_seance'] = deliberations_seance.relever(question, mentions)
+    donnees['seance'] = donnees['mentions_seance'].get('seance') or anterieures.get('seance', '')
     # Seuls comptent les mots qui disent l'objet : « Rédige une délibération » seule appelle une question, pas « … pour
     # dénommer la place Jean-Moulin ».
     vides = r'\b(redig\w*|prepar\w*|propos\w*|ecri\w*|gener\w*|fai[st]?|faire|etabli\w*|moi|nous|svp|stp|merci|un|une|projet|de|d|du|des|la|le|les|l|pour|deliberations?|conseil|municipal|precision|plus|recente|prioritaire)\b'
@@ -207,8 +212,9 @@ def requete(donnees: dict, modele: str, sources: dict) -> dict:
         '« Considérant », qui exposent les motifs à partir des seuls faits de la demande. decisions est une liste de une à cinq '
         'décisions complètes, rédigées comme des décisions effectives du conseil (« Le conseil municipal approuve… », « décide… », '
         '« autorise le maire à… »), sans numéro d’article. ' + consigne + ' '
-        'Reprends exactement, dans les décisions, chaque valeur de la liste valeurs_donnees (montants, dates, durées, surfaces, '
-        'références) et chaque nom donné dans la demande. Écris [à compléter] seulement pour une information absente de la '
+        'Reprends dans les décisions les valeurs exactes qui concernent leur objet (montants, dates, durées, surfaces, références) '
+        'et les noms correspondants. La convocation, les effectifs et le résultat du vote figurent séparément dans le document. '
+        'Écris [à compléter] seulement pour une information absente de la '
         'demande : n’invente aucun nom, montant, chiffre, date ni grade. N’écris aucune '
         'référence juridique (article, code, loi) : les visas sont ajoutés après vérification. Ne rédige ni le vote, ni '
         'l’exécution, ni la publicité, ni les voies de recours, ni les signatures : ils sont ajoutés séparément. '
@@ -327,7 +333,7 @@ def _visas(articles, sources, complements, communal):
 
 
 def assembler(donnees: dict, genere: dict, sources: dict, logo=None) -> dict:
-    """Document complet, commun à l'aperçu et au Word ; les éléments de séance restent à compléter."""
+    """Document complet, commun à l'aperçu et au Word ; les éléments de séance absents restent à compléter."""
     nom, _, articles, complements, _, points = theme(donnees['contexte'])
     collectivite_nom = donnees.get('collectivite') or '[Collectivité à préciser]'
     simple = _plain(collectivite_nom)
@@ -350,22 +356,26 @@ def assembler(donnees: dict, genere: dict, sources: dict, logo=None) -> dict:
     tous = decisions + fixes
     for n, a in enumerate(tous, 1):
         a['number'] = n
-    seance = donnees.get('seance') or A_COMPLETER
+    mentions = donnees.get('mentions_seance')
+    if mentions is None:
+        mentions = deliberations_seance.relever(donnees['contexte'])
+    seance = mentions.get('seance') or donnees.get('seance') or A_COMPLETER
     return {
         'kind': 'deliberation',
         'title': 'Délibération n° ' + (donnees.get('numero') or '[à attribuer]'),
         'collectivite': collectivite_nom,
         'objet': 'Objet : ' + genere['objet'],
         'preambule': [f'Extrait du registre des délibérations du {conseil}', f'Séance du {seance}',
-                      f'Date de la convocation : {A_COMPLETER}',
-                      f'Membres en exercice : {A_COMPLETER} · Présents : {A_COMPLETER} · Votants : {A_COMPLETER}',
-                      f'Présents : {A_COMPLETER}', f'Absents excusés : {A_COMPLETER} · Pouvoirs : {A_COMPLETER}',
+                      f"Date de la convocation : {mentions.get('convocation', A_COMPLETER)}",
+                      f"Membres en exercice : {mentions.get('exercice', A_COMPLETER)} · Présents : {mentions.get('presents', A_COMPLETER)}"
+                      f" · Pouvoirs : {mentions.get('pouvoirs', A_COMPLETER)} · Votants : {mentions.get('votants', A_COMPLETER)}",
+                      f'Noms des présents : {A_COMPLETER}', f'Absents excusés : {A_COMPLETER} · Détail des pouvoirs : {A_COMPLETER}',
                       f'Présidence : {A_COMPLETER} · Secrétaire de séance : {A_COMPLETER}',
-                      f'Le quorum étant atteint, le {conseil} peut valablement délibérer.'],
+                      f'Quorum : {A_COMPLETER}'],
         'autorite': f'Le {conseil}',
         'visas': _visas(articles, sources, complements, communal),
         'considerants': genere['considerants'],
-        'vote': 'Après en avoir délibéré, [à l’unanimité / par … voix pour, … voix contre et … abstentions],',
+        'vote': deliberations_seance.mention_vote(mentions, A_COMPLETER),
         'decision': 'DÉCIDE',
         'articles': tous,
         'lieu_date': (f'Fait et délibéré à {lieu}, les jour, mois et an susdits.' if lieu

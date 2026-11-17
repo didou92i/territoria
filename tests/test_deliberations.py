@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: EUPL-1.2
 # SPDX-FileCopyrightText: 2026 Rhiad AZZABI (TerritorIA, SIREN 989 227 731)
 import json
+import re
 import sys
 import tempfile
 import unittest
@@ -112,6 +113,68 @@ class LectureTests(unittest.TestCase):
 
 
 class AssemblageTests(unittest.TestCase):
+    def test_chiffres_non_fournis_ne_sont_pas_deduits(self):
+        def document(question):
+            donnees, _ = d.preparer(question, None, 'Commune de Testville')
+            return d.assembler(donnees, d.lire(completion(), donnees), d.textes())
+
+        # Les chiffres de l'objet et ceux d'un montant n'indiquent ni voix ni présence.
+        doc = document(DEMANDE + ' Aide de 23 euros pour 2 ateliers de 3 heures. Le conseil délègue 3 pouvoirs de police au maire.')
+        self.assertNotRegex(doc['vote'], r'\d')
+        effectifs = next(p for p in doc['preambule'] if 'Membres en exercice' in p)
+        self.assertNotRegex(effectifs, r'\d')
+
+        # Une seule présence connue ne suffit pas pour déterminer votants et voix.
+        doc = document(DEMANDE + ' 22 membres présents.')
+        effectifs = next(p for p in doc['preambule'] if 'Membres en exercice' in p)
+        self.assertRegex(effectifs.lower(), r'présents\s*:\s*22\b|\b22\s+(?:membres\s+)?présents\b')
+        self.assertNotRegex(effectifs.lower(), r'(?:membres en exercice|votants)\s*:\s*\d')
+        self.assertNotRegex(doc['vote'], r'\d')
+
+    def test_ancien_projet_vote_partiel_et_changement_de_mode(self):
+        donnees = {'contexte': DEMANDE + ' 29 membres en exercice. Présents : 22. Vote : Pour : 23.',
+                   'seance': '15 décembre 2026'}
+
+        def modifier(question):
+            nonlocal donnees
+            precedent = {'kind': 'deliberation', 'inputs': donnees}
+            donnees, _ = d.preparer(question, precedent, 'Commune de Testville')
+            return d.assembler(donnees, d.lire(completion(), donnees), d.textes())
+
+        acte = modifier('Modifie le montant de la subvention.')
+        self.assertRegex('\n'.join(acte['preambule']).lower(), r'présents\s*:\s*22\b|\b22\s+présents\b')
+        self.assertRegex(acte['vote'].lower(), r'\b23\s+(?:voix\s+)?pour\b|\bpour\s*:\s*23\b')
+
+        corrige = modifier('Corrige le vote : pour : 21.')
+        self.assertRegex(corrige['vote'].lower(), r'\b21\s+(?:voix\s+)?pour\b|\bpour\s*:\s*21\b')
+        self.assertEqual(re.findall(r'\d+', corrige['vote']), ['21'])
+        unanimite = modifier('Corrige le vote : à l’unanimité.')
+        self.assertIn('unanimité', unanimite['vote'].lower())
+        self.assertNotRegex(unanimite['vote'], r'\d')
+
+        decompte = modifier('Corrige les effectifs et le vote : présents : 3. Vote : 2 pour, 1 contre.')
+        self.assertRegex(decompte['vote'].lower(), r'\b2\s+(?:voix\s+)?pour\b|\bpour\s*:\s*2\b')
+        self.assertRegex(decompte['vote'].lower(), r'\b1\s+(?:voix\s+)?contre\b|\bcontre\s*:\s*1\b')
+        self.assertNotIn('unanimité', decompte['vote'].lower())
+        self.assertNotIn('quorum étant atteint', '\n'.join(decompte['preambule']).lower())
+
+    def test_corrections_et_mentions_etrangeres_au_scrutin(self):
+        cas = (('Vote : 23\u00a0pour/0\u202fcontre/2 abstentions.',
+                'Remplace les 2 abstentions par 1 et les 23 voix pour par 24.', ['24', '0', '1']),
+               ('Vote : 23 pour, 0 contre, 2 abstentions.',
+                'Cette délibération n’est pas adoptée à l’unanimité.', ['23', '0', '2']))
+        for initial, modification, valeurs in cas:
+            with self.subTest(modification=modification):
+                donnees, _ = d.preparer(DEMANDE + ' ' + initial, None, 'Commune de Testville')
+                donnees, _ = d.preparer(modification, {'kind': 'deliberation', 'inputs': donnees}, '')
+                acte = d.assembler(donnees, d.lire(completion(), donnees), d.textes())
+                self.assertEqual(re.findall(r'\d+', acte['vote']), valeurs)
+        with self.subTest(motif='fréquentation d’un événement'):
+            donnees, _ = d.preparer(DEMANDE + ' Le marché a accueilli 2 000 présents à la dernière édition.', None, '')
+            acte = d.assembler(donnees, d.lire(completion(), donnees), d.textes())
+            effectifs = next(p for p in acte['preambule'] if 'Membres en exercice' in p)
+            self.assertNotRegex(effectifs, r'\d')
+
     def test_document_d_une_subvention(self):
         donnees, _ = d.preparer(DEMANDE, None, 'Commune de Testville')
         doc = d.assembler(donnees, d.lire(completion(), donnees), d.textes())
@@ -138,6 +201,37 @@ class AssemblageTests(unittest.TestCase):
 
 
 class ConversationTests(Base):
+    def test_vote_et_effectifs_de_la_demande_jusqu_au_word(self):
+        from docx import Document
+        from io import BytesIO
+
+        demande = (DEMANDE + ' Convocation du 9 décembre 2026. '
+                   '29 membres en exercice, 22 présents, 3 pouvoirs et 25 votants. Vote : 23 pour, 0 contre, 2 abstentions.')
+        tours = ((demande, 29, 23, 0),
+                 ('Modifiez le montant de la subvention à 2 000 euros.', 29, 23, 0),
+                 ('Corrigez les données de séance : 30 membres en exercice. Vote : 22 pour, 1 contre, 2 abstentions.', 30, 22, 1))
+        payload = {'assistant': 'deliberation', 'mode': 'libre'}
+        with patch.object(llm_backend, 'chat', return_value=completion()):
+            for question, effectif, pour, contre in tours:
+                statut, reponse = self.appel('POST', '/api/chat', {**payload, 'question': question})
+                self.assertEqual(statut, 200)
+                payload['conversation'] = reponse['conversation']
+                artefact = reponse['artifact']
+                self.assertEqual(artefact['kind'], 'deliberation')
+                acte = artefact['document']
+                statut, word = self.appel('GET', artefact['download'])
+                self.assertEqual(statut, 200)
+                paragraphes = [p.text for p in Document(BytesIO(word)).paragraphs]
+                with self.subTest(question=question):
+                    entete = '\n'.join(acte['preambule'])
+                    for libelle, valeur in (('membres en exercice', effectif), ('présents', 22), ('pouvoirs', 3), ('votants', 25)):
+                        self.assertRegex(entete.lower(), rf'\b{libelle}\s*:\s*{valeur}\b|\b{valeur}\s+{libelle}\b')
+                    self.assertRegex(entete.lower(), r'convocation\s*:\s*9 décembre 2026')
+                    for voix, sens in ((pour, 'pour'), (contre, 'contre'), (2, 'abstentions')):
+                        self.assertRegex(acte['vote'].lower(), rf'\b{voix}\s+(?:voix\s+)?{sens}\b|\b{sens}\s*:\s*{voix}\b')
+                    for ligne in [*acte['preambule'], acte['vote']]:
+                        self.assertIn(ligne, paragraphes)
+
     def test_projet_complet_dans_la_conversation_avec_word(self):
         with patch.object(llm_backend, 'chat', return_value=completion()) as modele:
             statut, reponse = self.appel('POST', '/api/chat', {'question': DEMANDE, 'mode': 'libre'})
