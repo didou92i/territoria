@@ -5,6 +5,7 @@ import re
 import branding
 import legal_sources
 from config import REGLAGES
+from territoria.collectivites import lieu_communal
 
 MENTION_DEMONSTRATION='Document de démonstration — sans valeur juridique'
 
@@ -20,13 +21,12 @@ ARTICLE_TITLES={
 
 def _commune(collectivite):
     """« Commune de Démoville » → (« Le Maire de la commune de Démoville », « Démoville ») ; (« Le Maire », '') sinon."""
-    m=re.match(r"\s*(commune|ville|mairie)\s+(de\s+|d['’]\s*)(\S.*)",collectivite,re.IGNORECASE)
-    if not m:
+    lieu=lieu_communal(collectivite)
+    if not lieu:
         return 'Le Maire',''
-    lieu=m.group(3).strip()
-    if m.group(1).lower()=='mairie':
-        return 'Le Maire '+m.group(2).lower()+lieu,lieu
-    return 'Le Maire de la '+m.group(1).lower()+' '+m.group(2).lower()+lieu,lieu
+    genre, suite=collectivite.strip().split(None,1)
+    formule='Le Maire ' if genre.lower()=='mairie' else 'Le Maire de la '+genre.lower()+' '
+    return formule+suite[0].lower()+suite[1:],lieu
 
 
 def assemble(data,generated,legal=None,data_dir=None):

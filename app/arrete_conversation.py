@@ -4,6 +4,7 @@
 import re
 import branding
 from legal_sources import _plain,classify
+from territoria.collectivites import collectivite as collectivity
 
 # Ajoutée à chaque relance ; ce n'est pas une précision de l'utilisateur, elle ne compte pas dans le seuil de précision.
 PRECISION='\n\nPrécision la plus récente, prioritaire :\n'
@@ -44,7 +45,7 @@ def _mots(texte):
 def _lieu(collectivite):
     """« Commune de Senlis » → « commune de Senlis » ; sans commune enregistrée, la commune fictive des démonstrations."""
     nom=str(collectivite or '').strip()
-    if re.match(r'(?:commune|ville)\s+(?:de\s+|d[’\'])\S',nom,re.I):return nom[0].lower()+nom[1:]
+    if nom and collectivity(nom):return nom[0].lower()+nom[1:]
     return 'commune de Démoville'
 
 
@@ -84,14 +85,6 @@ def is_drafting(question,previous=None,assistant=''):
     if re.search(r'\b(?:ne\s+(?:redige|genere|cree)|sans\s+(?:rediger|generer|creer))',text):return False
     return bool(re.search(r'\b(redig\w*|gener\w*|prepar\w*|etabli\w*|creer?\w*|propos\w*|faire|fai[st])\b',text)
                 or re.search(r'\barrete\s+(?:pour|de|concernant|relatif)',text))
-
-
-def collectivity(question):
-    match=re.search(r'\b(?:commune|ville|mairie|municipalité)\s+(?:de\s+|d[’\'])?([^,;\n?.]+)',question,re.IGNORECASE)
-    if match:
-        name=re.split(r'\s+(?:concernant|relative?|portant|afin|pour|sur|avec|interdisant|réglementant|reglementant|entre|du|le|la)\b',match.group(1),maxsplit=1,flags=re.IGNORECASE)[0].strip()
-        if name and len(name)<=100:return 'Commune de '+name
-    return ''
 
 
 def prepare(question,previous,data_dir):
