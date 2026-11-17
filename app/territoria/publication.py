@@ -29,6 +29,12 @@ MESSAGE_PUBLIE = 'Cet acte est publié : il ne se modifie plus.'
 MESSAGE_RETIRE = 'Cet acte a été retiré de la publication : il ne se modifie plus.'
 MOTIF_MAX = 300
 MESSAGE_MATIERE = 'Choisissez la matière de la délibération (nomenclature ACTES).'
+MESSAGE_PROJET = ('Cet acte contient une mention de projet ou un champ à compléter. '
+                  'Déposez le document définitif dans « La version signée ».')
+MENTION_PROJET = re.compile(r'\bprojet\s*[—–-]\s*non\s+signé\b', re.I)
+_CHAMP_PROJET = re.compile(r'\[(?:[^\[\]\n]{0,80}\bà\s+(?:compléter|préciser|attribuer)\b[^\[\]\n]{0,80}'
+                           r'|\s*(?:date(?:\s+de\s+signature)?|nom\s+et\s+signature)\s*)\]'
+                           r"|\bsignature à apposer par l[’']autorité compétente\b", re.I)
 MESSAGE_WORD = 'Fichier Word trop volumineux ou invalide.'
 WORD_ENTREES_MAX = 1000
 WORD_TAILLE_MAX = 50 * 1024 * 1024  # décompressé, en tout
@@ -95,15 +101,26 @@ def verifier_archive_word(source) -> None:
         raise ValueError(MESSAGE_WORD)
 
 
+def verifier_version(objet: str, paragraphes: list[str], *, fiche_existante: bool = False) -> None:
+    """Repère les marques explicites d'un brouillon avant anonymisation."""
+    if any(_CHAMP_PROJET.search(bloc) or MENTION_PROJET.fullmatch(bloc.strip()) for bloc in (objet, *paragraphes)):
+        precision = ' Retirez d’abord cette fiche de la liste des actes à publier pour réutiliser son numéro.' if fiche_existante else ''
+        raise ValueError(MESSAGE_PROJET + precision)
+
+
 def paragraphes_docx(chemin: Path) -> list[str]:
     """Texte intégral d'un Word, bloc par bloc ; une archive démesurée (bombe de décompression) est refusée avant lecture."""
     verifier_archive_word(chemin)
     from docx import Document
+    from docx.parts.hdrftr import FooterPart, HeaderPart
     try:
-        corps = Document(str(chemin)).element.body
+        document = Document(str(chemin))
     except Exception:
         raise ValueError(MESSAGE_WORD) from None
-    blocs = [b for b in _blocs(corps) if b]
+    # Le papier à en-tête et le pied ne sont pas repris dans le PDF ; garder la mention de projet pour le contrôle.
+    blocs = [b for partie in document.part.related_parts.values() if isinstance(partie, (HeaderPart, FooterPart))
+             for b in _blocs(partie.element) if MENTION_PROJET.fullmatch(b)]
+    blocs.extend(b for b in _blocs(document.element.body) if b)
     if sum(len(b) for b in blocs) > TEXTE_MAX:
         raise ValueError(MESSAGE_WORD)
     return blocs
@@ -178,6 +195,8 @@ def creer(base: Path, donnees_dir: Path, *, type: str, numero: str, date_acte: s
         raise ValueError('L’acte ne contient aucun texte.')
     if sum(len(p) for p in paragraphes) > TEXTE_MAX:
         raise ValueError('Acte trop long pour être publié ici.')
+    objet = _texte(objet, 'Indiquez l’objet de l’acte.', 300)
+    verifier_version(objet, paragraphes)
     fichier = _nom_fichier(_texte(numero, 'Indiquez le numéro de l’acte.', 60))
     with ouvrir(base) as c:
         if not visiteurs_a_part:
@@ -189,7 +208,7 @@ def creer(base: Path, donnees_dir: Path, *, type: str, numero: str, date_acte: s
         if any(_nom_fichier(l['numero']) == fichier for l in numeros):
             raise ValueError('Ce numéro est déjà dans les actes à publier.')  # « D2026/012 » et « D2026-012 » : un même PDF
     ligne = {'id': uuid.uuid4().hex, 'type': type, 'numero': _texte(numero, 'Indiquez le numéro de l’acte.', 60),
-             'date_acte': _date(date_acte), 'objet': _texte(objet, 'Indiquez l’objet de l’acte.', 300), 'source': source,
+             'date_acte': _date(date_acte), 'objet': objet, 'source': source,
              'acte_id': acte_id or '', 'matiere_code': matiere_code, 'votes': json.dumps(_votes(votes)),
              'cree_par': par or '', 'cree_le': _maintenant()}
     ecrire_prive(dossier(donnees_dir, ligne['id']) / 'texte.json', json.dumps(paragraphes, ensure_ascii=False).encode('utf-8'))
@@ -284,6 +303,7 @@ def valider(base: Path, donnees_dir: Path, ident: str, par: str) -> dict:
     refuser_si_fige(acte)
     if not acte['repere_le']:
         raise ValueError('Lancez d’abord le repérage des données personnelles.')
+    verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
     blocs = [acte['objet']] + acte['paragraphes']
     for passage in acte['passages']:
         if passage['coche'] and not any(anonymisation.occurrences(bloc, passage) for bloc in blocs):

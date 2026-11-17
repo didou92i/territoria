@@ -141,6 +141,8 @@ def _paragraphes_pdf(pages):
     paragraphes, courant = [], []
     for page in pages:
         for ligne in page.splitlines():
+            if publication.MENTION_PROJET.fullmatch(ligne.strip()):
+                raise ValueError(publication.MESSAGE_PROJET)
             if ligne.strip():
                 courant.append(ligne.strip())
                 if ligne.rstrip().endswith(('.', ';', ':')):
@@ -245,6 +247,7 @@ def _publications_post(p, d, compte):
         acte = publication.retirer(server.DB, ident, d.get('motif'), compte['id'])
         _noter('publication_retiree', ident)
         return _json(200, acte)
+    publication.verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
     acte = publication.marquer_publie(server.DB, ident)  # à la date du dossier, imprimée sur le PDF
     _noter('publication_en_ligne', ident)
     return _json(200, acte)

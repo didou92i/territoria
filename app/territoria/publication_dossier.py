@@ -15,7 +15,7 @@ import zipfile
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from . import anonymisation, nomenclature
+from . import anonymisation, nomenclature, publication
 
 TYPES = {'arrete': 'Arrêté', 'deliberation': 'Délibération'}
 COLONNES = ('COLL_NOM', 'COLL_SIRET', 'DELIB_ID', 'DELIB_DATE', 'DELIB_MATIERE_CODE', 'DELIB_MATIERE_NOM', 'DELIB_OBJET',
@@ -145,6 +145,8 @@ def dossier(actes_a_publier: list[dict], deja_publies: list[dict], profil: dict,
         raise ValueError('Choisissez au moins un acte validé.')
     if date.fromisoformat(date_mise_en_ligne) < jour_courant():
         raise ValueError(MESSAGE_DATE)
+    for acte in actes_a_publier:
+        publication.verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
     tous = [a | {'mise_en_ligne': date_mise_en_ligne} for a in actes_a_publier] + \
            [a | {'mise_en_ligne': a.get('publie_le') or a.get('mise_en_ligne', '')} for a in deja_publies]
     if any(a['type'] == 'deliberation' for a in tous) and not profil.get('siret'):
