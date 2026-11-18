@@ -224,6 +224,52 @@ class ArreteTemplateTests(unittest.TestCase):
         self.assertFalse(arrete_conversation.is_drafting('Quels textes autorisent le maire à interdire la circulation ?',precedent))
         self.assertFalse(arrete_conversation.is_drafting('Il faut autoriser les chalets.',None))
 
+    def test_stationnement_conserve_la_signataire_et_les_executants_dans_le_word(self):
+        import arrete_conversation
+        question = ('Rédige un arrêté temporaire de stationnement pour la commune de Val-des-Ormes. Pour les travaux, '
+                    'interdire le stationnement rue des Tilleuls du 7 décembre 2026 à 8 h au 9 décembre 2026 à 18 h. '
+                    'Les services techniques municipaux posent, entretiennent et retirent la signalisation. La maire signe.')
+        donnees, precision = arrete_conversation.prepare(question, None, self.root)
+        self.assertFalse(precision)
+        texte_mesure = 'Le stationnement est interdit rue des Tilleuls du 7 décembre 2026 à 8 h au 9 décembre 2026 à 18 h.'
+        reponse = {'objet': 'Stationnement rue des Tilleuls', 'considerant': 'Considérant les travaux rue des Tilleuls,',
+                   'mesures': [texte_mesure]}
+        prepared = arretes.prepare(donnees, self.root, 'local')
+        result = arretes.finish({'prepared': prepared, 'completion': {'choices': [{'message': {'content': json.dumps(reponse)}}]}},
+                                self.root, 'local')
+        doc = result['document']
+        lignes = [p.text for p in Document(self.root / 'arretes' / (result['id'] + '.docx')).paragraphs]
+        autorite = 'La Maire de la commune de Val-des-Ormes'
+        with self.subTest(champ='signataire'):
+            self.assertIn(autorite + ',', lignes)
+            self.assertIn(autorite, lignes)
+            self.assertTrue(doc['title'].startswith('Arrêté de la maire'))
+        with self.subTest(champ='signalisation'):
+            application = next(a['texte'] for a in doc['articles'] if a['role'] == 'mise_en_oeuvre')
+            self.assertEqual(application.count('par les services techniques municipaux'), 3)
+            self.assertIn(application, lignes)
+        self.assertIn(texte_mesure, lignes)
+
+    def test_stationnement_attribution_partielle_sans_changer_les_autres_clauses(self):
+        import arrete_document
+        original = arretes.read_completion(self.completion, self.input)
+        mesure = ' La pose des panneaux est assurée par la société Balise.'
+        faits = {**self.input, 'contexte': self.input['contexte'] + mesure + ' La maire assiste aux travaux.'}
+        genere = arretes.read_completion(self.completion, faits)
+        initial = arrete_document.assemble(self.input, original)
+        acte = arrete_document.assemble(faits, genere)
+        self.assertEqual(acte['autorite'], initial['autorite'])
+        origine = {a['role']: a['texte'] for a in initial['articles']}
+        articles = {a['role']: a['texte'] for a in acte['articles']}
+        application = articles.pop('mise_en_oeuvre')
+        attendu = origine.pop('mise_en_oeuvre').replace('par les services compétents', 'par la société Balise')
+        self.assertEqual(application, attendu)
+        self.assertEqual(articles, origine)
+        formulaire = {**faits, 'signalisation': 'Clause saisie dans le formulaire.', 'autorite': 'Le premier adjoint'}
+        manuel = arrete_document.assemble(formulaire, genere)
+        self.assertEqual(manuel['autorite'], formulaire['autorite'])
+        self.assertEqual(next(a['texte'] for a in manuel['articles'] if a['role'] == 'mise_en_oeuvre'), formulaire['signalisation'])
+
     def test_le_maire_et_le_lieu_de_signature_nomment_la_commune(self):
         import arrete_document
         self.assertEqual(arrete_document._commune('Commune de Démoville'),('Le Maire de la commune de Démoville','Démoville'))

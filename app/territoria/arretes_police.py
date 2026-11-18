@@ -170,8 +170,9 @@ _PASSIF = re.compile(r"(?:\bsignalisation|\bpanneaux?)\b(?P<action>[^;:.!?]{0,16
 _LIBELLE = re.compile(r"(?:ex[ée]cutant|responsable) de la signalisation\s*:\s*([^,;.!?]{1,120})$", re.I)
 
 
-def _attributions(question: str, precedentes: dict) -> dict:
-    attributions = dict(precedentes)
+def attributions_signalisation(question: str, precedentes: dict | None = None) -> dict:
+    """Relève l'acteur explicitement chargé de chaque opération de signalisation."""
+    attributions = dict(precedentes or {})
     for phrase in re.split(r'[;.!?\n]', question):
         simple = _plain(phrase)
         if not re.search(r'\b(?:signalisation|panneaux?)\b', simple):
@@ -208,12 +209,12 @@ def preparer(question, precedent, collectivite_enregistree):
     anciennes = (precedent or {}).get('inputs', {}) if (precedent or {}).get('kind', '').startswith(FAMILLE.kind) else {}
     attributions = anciennes.get('executants_signalisation')
     if attributions is None:
-        attributions = _attributions(anciennes.get('contexte', ''), {})
+        attributions = attributions_signalisation(anciennes.get('contexte', ''))
     if donnees.get('decisions_precedentes'):
         donnees['derniere_precision'] = question
         if not donnees['contexte'].endswith(question):
             donnees['contexte'] += '\n\nPrécision la plus récente, prioritaire :\n' + question
-    donnees['executants_signalisation'] = _attributions(question, attributions)
+    donnees['executants_signalisation'] = attributions_signalisation(question, attributions)
     return donnees, clarification
 
 
