@@ -482,14 +482,16 @@ d'avoir examiné ce dossier.
 
 ## Mise à jour
 
-Les versions sont des étiquettes git.
+Le guide d’installation clone la branche principale. Pour une mise à jour, relevez la référence annoncée et validée pour votre installation. Vérifiez qu’elle inclut les correctifs déjà présents sur le poste.
 
 ```sh
-install/mettre-a-jour.sh --version v0.2.0
+read -r -p 'Référence Git validée : ' version
+install/mettre-a-jour.sh --version "$version"
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File install\mettre-a-jour.ps1 --version v0.2.0
+$version = Read-Host 'Référence Git validée'
+powershell -NoProfile -ExecutionPolicy Bypass -File install\mettre-a-jour.ps1 --version $version
 ```
 
 - **La version** : une étiquette, ou `origin/<branche>` (par exemple `origin/main`). Un nom de branche seul, `main`,

@@ -17,6 +17,7 @@ import shutil
 import stat
 import threading
 import time
+import unicodedata
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -425,19 +426,42 @@ def enregistrer_details(base: Path, ident: str, proprietaire: str, details: dict
     """Mentions obligatoires du procès-verbal (L2121-15) saisies par l'agent ; remplacent la saisie précédente."""
     propres = _details_valides(details)
     with ouvrir(base) as c:
+        c.execute('BEGIN IMMEDIATE')  # vérifier les votes et remplacer les mentions dans la même transaction
         _modifiable(c, ident, proprietaire)
         for ligne in c.execute('SELECT vote FROM seance_points WHERE seance_id=?', (ident,)).fetchall():
-            _vote_valide(_json(ligne['vote'], {}) or None, propres.get('membres_en_exercice'))  # votes déjà saisis
+            _vote_valide(_json(ligne['vote'], {}) or None, propres)  # votes déjà saisis
         c.execute('UPDATE seances SET details=?, modifie=? WHERE id=?', (json.dumps(propres, ensure_ascii=False), _maintenant(), ident))
     return propres
 
 
-def _vote_valide(vote, membres: int | None) -> dict | None:
+def _identite_vote(nom: str) -> str:
+    return ' '.join(unicodedata.normalize('NFC', nom).casefold().split())
+
+
+def _electeurs_declares(details: dict) -> set[str] | None:
+    if 'presents' not in details or 'representes' not in details:
+        return None
+    electeurs = {_identite_vote(nom) for nom in details['presents']}
+    electeurs.update(_identite_vote(pouvoir['mandant']) for pouvoir in details['representes'])
+    return electeurs
+
+
+def _borner_voix(total: int, details: dict, electeurs: set[str] | None) -> None:
+    membres = details.get('membres_en_exercice')
+    if membres is not None and total > membres:
+        raise ValueError('Plus de voix que de membres en exercice.')
+    if electeurs is not None and total > len(electeurs):
+        raise ValueError('Plus de voix que de membres présents et représentés.')
+
+
+def _vote_valide(vote, details: dict) -> dict | None:
     if vote is None:
         return None
     if not isinstance(vote, dict):
         raise ValueError('vote : unanimité ou décompte')
+    electeurs = _electeurs_declares(details)
     if vote.get('mode') == 'unanimite' and set(vote) == {'mode'}:
+        _borner_voix(1, details, electeurs)
         return {'mode': 'unanimite'}
     decompte = {'mode', 'pour', 'contre', 'abstentions'}
     if vote.get('mode') != 'decompte' or not decompte <= set(vote) <= decompte | {'public'}:
@@ -446,17 +470,28 @@ def _vote_valide(vote, membres: int | None) -> dict | None:
     total = propre['pour'] + propre['contre'] + propre['abstentions']
     if total < 1:
         raise ValueError('vote : au moins une voix')
-    if membres and total > membres:
-        raise ValueError('Plus de voix que de membres en exercice.')
+    _borner_voix(total, details, electeurs)
     if 'public' in vote:
         public = vote['public']
         if not isinstance(public, dict) or set(public) - {'pour', 'contre', 'abstention'}:
             raise ValueError('scrutin public : noms des votants pour, contre et des abstentions')
         propre['public'] = {cle: _noms(noms, cle) for cle, noms in public.items()}
+        deja_vu = set()
+        for cle, noms in propre['public'].items():
+            nombre = propre['abstentions' if cle == 'abstention' else cle]
+            if len(noms) > nombre:
+                raise ValueError(f'scrutin public : plus de noms que de voix dans la liste « {cle} ».')
+            for nom in noms:
+                identite = _identite_vote(nom)
+                if electeurs is not None and identite not in electeurs:
+                    raise ValueError('scrutin public : chaque votant nommé doit être présent ou représenté.')
+                if identite in deja_vu:
+                    raise ValueError('scrutin public : un même votant apparaît plusieurs fois.')
+                deja_vu.add(identite)
     return propre
 
 
-def _point_valide(point, membres: int | None) -> dict:
+def _point_valide(point, details: dict) -> dict:
     if not isinstance(point, dict) or set(point) - set(CLES_POINT):
         raise ValueError('point : ' + ', '.join(CLES_POINT))
     numero = point.get('deliberation_numero') or None
@@ -475,7 +510,7 @@ def _point_valide(point, membres: int | None) -> dict:
         raise ValueError('debut : un nombre de secondes')
     return {'titre': _texte(point, 'titre', 1, 300), 'deliberation_numero': numero.strip() if numero else None,
             'rapporteur': _nom(rapporteur, 'rapporteur') if rapporteur else None, 'rapport': rapport.strip() if rapport else None,
-            'vote': _vote_valide(point.get('vote'), membres),
+            'vote': _vote_valide(point.get('vote'), details),
             'scrutin_particulier': scrutin, 'debut': float(debut) if debut is not None else None}
 
 
@@ -485,9 +520,10 @@ def enregistrer_points(base: Path, ident: str, proprietaire: str, points: list[d
     if not isinstance(points, list) or len(points) > POINTS_MAX:
         raise ValueError(f'ordre du jour : {POINTS_MAX} points au plus')
     with ouvrir(base) as c:
+        c.execute('BEGIN IMMEDIATE')
         seance = _modifiable(c, ident, proprietaire)
-        membres = _json(seance['details'], {}).get('membres_en_exercice')
-        propres = [_point_valide(point, membres) for point in points]
+        details = _json(seance['details'], {})
+        propres = [_point_valide(point, details) for point in points]
         anciens = {l['rang']: (l['teneur'], l['erreur'], l['empreinte']) for l in
                    c.execute('SELECT rang, teneur, erreur, empreinte FROM seance_points WHERE seance_id=?', (ident,))}
         c.execute('DELETE FROM seance_points WHERE seance_id=?', (ident,))
@@ -779,6 +815,10 @@ def word_document(base: Path, donnees: Path, ident: str, proprietaire: str, docu
     elif not seance['pv_a_jour'] or seance['etat'] == 'redaction':
         raise ValueError("Le procès-verbal n'est plus à jour ou pas encore rédigé : relancez sa rédaction ; seuls les points "
                          "modifiés seront refaits.")
+    else:
+        # Les séances enregistrées avant les contrôles de cohérence restent modifiables.
+        for point in seance['points']:
+            _vote_valide(point['vote'], seance['details'])
     nom, mention, contenu = DOCUMENTS_WORD[document]
     doc = arrete_document.document_vierge(donnees, branding.profile(donnees).get('collectivite') or '', mention)
     for genre, texte in contenu(seance):

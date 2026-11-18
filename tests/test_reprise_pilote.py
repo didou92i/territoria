@@ -19,12 +19,13 @@ from reportlab.pdfgen.canvas import Canvas
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'app'))
 import arretes
+import branding
 import demo
 import outils
 import reprise_pilote
 import sauvegarde
 import server
-from territoria import fonds_publics
+from territoria import fonds_publics, registre, seances
 from config import REGLAGES
 
 REFERENCE = 'reference-stationnement-2023-13.pdf'
@@ -421,6 +422,31 @@ class RefusTests(Base):
             c.execute('DELETE FROM documents WHERE id != ?', ('cgfp-l121-1',))
         self.assertRefuse()
 
+    def test_registre_seul_preserve(self):
+        initialiser(self.cible)
+        chemin = self.cible / reprise_pilote.BASE
+        numero = registre.attribuer(chemin, 'ancien', 'arrete', 'Acte fictif')
+        self.assertRefuse()
+        self.assertNotEqual(registre.attribuer(chemin, 'nouveau', 'arrete', 'Second acte fictif'), numero)
+
+    def test_seance_seule_preservee(self):
+        initialiser(self.cible)
+        seances.creer(self.cible / reprise_pilote.BASE, 'agent', {'type': 'conseil', 'titre': 'Conseil', 'date': '2026-11-18'})
+        self.assertRefuse()
+
+    def test_table_metier_inconnue_occupee_preservee(self):
+        initialiser(self.cible)
+        with base(self.cible) as c:
+            c.execute('CREATE TABLE "autre table"(id INTEGER)')
+            c.execute('INSERT INTO "autre table" VALUES (1)')
+        self.assertRefuse()
+
+    def test_reglage_personnalise_preserve(self):
+        initialiser(self.cible)
+        with base(self.cible) as c:
+            c.execute("INSERT INTO parametres VALUES ('regles', '{}', '2026-11-18')")
+        self.assertRefuse()
+
     def test_assistant_personnalise_refuse(self):
         initialiser(self.cible)
         ajouter_assistant(self.cible)
@@ -467,6 +493,28 @@ class RefusTests(Base):
             ecrire(self.cible / ('territoire.sqlite3' + suffixe), b'reste')
         self.importer(forcer=True)
         self.assertEqual([p.name for p in self.cible.iterdir() if p.name.startswith('territoire.sqlite3-')], [])
+
+    def test_identite_seule_refuse_la_reprise(self):
+        from docx import Document
+        from PIL import Image
+
+        for choix in ('profil', 'logo', 'gabarit'):
+            with self.subTest(choix=choix):
+                self.cible = self.racine / choix
+                initialiser(self.cible)
+                if choix == 'profil':
+                    branding.save(self.cible, {'collectivite': 'Commune synthétique', 'siret': '00000000000018'})
+                elif choix == 'logo':
+                    image = io.BytesIO()
+                    Image.new('RGB', (4, 4), 'blue').save(image, format='PNG')
+                    branding.upload(self.cible, image.getvalue())
+                else:
+                    gabarit = io.BytesIO()
+                    Document().save(gabarit)
+                    branding.upload_gabarit(self.cible, gabarit.getvalue())
+                self.assertRefuse()
+                self.importer(forcer=True)
+                self.assertEqual(branding.profile(self.cible)['collectivite'], 'Commune fictive')
 
     def test_dossier_absent_du_pilote_laisse_dans_la_cible(self):
         shutil.rmtree(self.pilote / 'identite')

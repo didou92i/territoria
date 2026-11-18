@@ -469,6 +469,43 @@ cas 'donnees_dans_le_depot_refusees' {
 $null = nouvel_environnement 'fonctions' @('docker', 'podman', 'lms', 'schtasks', 'icacls', 'winget')
 . (Join-Path -Path $depot -ChildPath 'install/installer.ps1')
 
+# Sonde BitLocker isolée des utilitaires natifs, y compris un dossier futur sur un second volume.
+cas 'bitlocker_volume_cible' {
+    $parentTest = dossier_neuf 'volume-bitlocker'
+    $ancienSysteme = $script:EstWindows
+    $anciennesDonnees = $script:Donnees
+    try {
+        $script:EstWindows = $true
+        $script:Donnees = Join-Path (Join-Path $parentTest 'futur') 'donnees'
+        $source = Join-Path $depot 'install/diagnostic.ps1'
+        $jetons = $null
+        $erreurs = $null
+        $ast = [System.Management.Automation.Language.Parser]::ParseFile($source, [ref]$jetons, [ref]$erreurs)
+        $fonction = $ast.Find({ param($n) $n -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -eq 'chiffrement_disque' }, $true)
+        $sonde = $fonction.Body.GetScriptBlock()
+        function Get-Volume {
+            param($FilePath)
+            if ($FilePath -ne $parentTest) { throw 'Le parent existant est attendu.' }
+            return [pscustomobject]@{ DriveLetter = 'E' }
+        }
+        function Get-BitLockerVolume {
+            param($MountPoint)
+            if ($MountPoint -ne 'E:') { throw 'Mauvais volume BitLocker.' }
+            return [pscustomobject]@{ MountPoint = $MountPoint; VolumeStatus = $conversion; ProtectionStatus = $protection }
+        }
+        foreach ($cas in @(
+            @('FullyEncrypted', 'On', 'actif'), @('FullyDecrypted', 'Off', 'inactif'),
+            @('FullyEncrypted', 'Off', 'inactif'), @('EncryptionInProgress', 'On', 'inconnu'))) {
+            $conversion, $protection, $attendu = $cas
+            verifie ((& $sonde) -eq $attendu) ('BitLocker ' + $conversion + ' / ' + $protection)
+        }
+    } finally {
+        $script:EstWindows = $ancienSysteme
+        $script:Donnees = $anciennesDonnees
+    }
+}
+
+
 cas 'citation_des_arguments_windows' {
     $attendus = [ordered]@{
         'simple' = 'simple'; 'avec espace' = '"avec espace"'; 'C:\Mes dossiers\x' = '"C:\Mes dossiers\x"'

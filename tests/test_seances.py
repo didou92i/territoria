@@ -28,7 +28,8 @@ SEGMENTS_PV = [
     {'debut': 67.0, 'fin': 80.0, 'intervenant': 'Intervenant 2', 'texte': 'Les tarifs restent inchangés.'},
 ]
 DETAILS = {'president': 'M. Martin', 'secretaires': ['Mme Durand'], 'membres_en_exercice': 19,
-           'presents': ['M. Martin', 'Mme Durand', 'M. Petit'], 'representes': [{'mandant': 'M. Leroy', 'mandataire': 'M. Martin'}],
+           'presents': ['M. Martin', 'Mme Durand', 'M. Petit', *[f'Membre {i}' for i in range(1, 15)]],
+           'representes': [{'mandant': 'M. Leroy', 'mandataire': 'M. Martin'}],
            'absents': ['Mme Roux'], 'heure_cloture': '21:30', 'arrete_le': '2026-12-15'}
 POINTS = [{'titre': 'Budget primitif 2027', 'deliberation_numero': 'D2026-052', 'rapporteur': 'Mme Durand',
            'vote': {'mode': 'decompte', 'pour': 15, 'contre': 2, 'abstentions': 1}, 'scrutin_particulier': False, 'debut': 5.0},
@@ -357,6 +358,45 @@ class SaisieTests(Base):
             with self.subTest(details=details), self.assertRaises(ValueError):
                 seances.enregistrer_details(self.base, ident, 'alice', details)
 
+    def test_borne_des_votants_si_presents_et_pouvoirs_connus(self):
+        ident = self._validee()
+        point = dict(POINTS[0], vote={'mode': 'decompte', 'pour': 3, 'contre': 0, 'abstentions': 0})
+        details = {'presents': ['A', 'B']}
+        seances.enregistrer_details(self.base, ident, 'alice', details)
+        seances.enregistrer_points(self.base, ident, 'alice', [point])
+        with self.assertRaisesRegex(ValueError, 'présents et représentés'):
+            seances.enregistrer_details(self.base, ident, 'alice', dict(details, representes=[]))
+        self.assertEqual(seances.lire(self.base, ident, 'alice')['details'], details)
+        seances.enregistrer_details(self.base, ident, 'alice', dict(details, representes=[{'mandant': 'C', 'mandataire': 'B'}]))
+        with self.assertRaisesRegex(ValueError, 'présents et représentés'):
+            seances.enregistrer_points(self.base, ident, 'alice', [dict(point, vote=dict(point['vote'], contre=1))])
+        self.assertEqual(seances.lire(self.base, ident, 'alice')['points'][0]['vote'], point['vote'])
+
+    def test_listes_nominatives_compatibles_avec_le_decompte(self):
+        ident = self._validee()
+        vote = {'mode': 'decompte', 'pour': 2, 'contre': 1, 'abstentions': 0}
+        for noms in ({'pour': ['A', 'B', 'C']}, {'abstention': ['A']}, {'pour': ['A', ' a ']},
+                     {'pour': ['Jean  Roy'], 'contre': ['JEAN ROY']}):
+            with self.subTest(noms=noms), self.assertRaises(ValueError):
+                seances.enregistrer_points(self.base, ident, 'alice', [dict(POINTS[0], vote=dict(vote, public=noms))])
+        seances.enregistrer_points(self.base, ident, 'alice', [dict(POINTS[0], vote=dict(vote, public={'pour': ['A']}))])
+
+    def test_scrutin_public_dans_les_effectifs_declares(self):
+        ident = self._validee()
+        details = {'presents': ['Alix'], 'representes': [{'mandant': 'Noé', 'mandataire': 'Alix'}]}
+        seances.enregistrer_details(self.base, ident, 'alice', details)
+        vote = {'mode': 'decompte', 'pour': 1, 'contre': 0, 'abstentions': 0}
+        def point(nom):
+            return dict(POINTS[0], vote=dict(vote, public={'pour': [nom]}))
+        seances.enregistrer_points(self.base, ident, 'alice', [point('NOÉ')])
+        with self.assertRaisesRegex(ValueError, 'présent ou représenté'):
+            seances.enregistrer_points(self.base, ident, 'alice', [point('Autre personne')])
+        self.assertEqual(seances.lire(self.base, ident, 'alice')['points'][0]['vote']['public'], {'pour': ['NOÉ']})
+        with self.assertRaisesRegex(ValueError, 'présent ou représenté'):
+            seances.enregistrer_details(self.base, ident, 'alice', dict(details, representes=[]))
+        seances.enregistrer_details(self.base, ident, 'alice', {'presents': ['Alix']})
+        seances.enregistrer_points(self.base, ident, 'alice', [point('Autre personne')])
+
     def test_trop_de_voix_refusees(self):
         ident = self._validee()
         seances.enregistrer_details(self.base, ident, 'alice', dict(DETAILS))
@@ -681,6 +721,15 @@ class DocumentsTests(AvecModele):
         with self.modele(completion(TENEUR_1), completion(TENEUR_2)):
             seances.rediger_en_attente(self.base, self.donnees)
         return ident
+
+    def test_exports_refusent_un_ancien_scrutin_incoherent(self):
+        ident = self._pv_pret()
+        incoherent = {'mode': 'decompte', 'pour': 1, 'contre': 0, 'abstentions': 0, 'public': {'contre': ['A']}}
+        with ouvrir(self.base) as c:
+            c.execute('UPDATE seance_points SET vote=? WHERE seance_id=? AND rang=1', (json.dumps(incoherent), ident))
+        for document in ('proces_verbal', 'liste_deliberations'):
+            with self.subTest(document=document), self.assertRaisesRegex(ValueError, 'scrutin public'):
+                seances.word_document(self.base, self.donnees, ident, 'alice', document)
 
     def test_word_sur_papier_a_en_tete(self):
         import branding

@@ -20,14 +20,16 @@ from .collectivites import lieu_communal
 from .deliberations import REDACTION_MAX, ReferenceInventee, _plain, _visas, collectivite, lire, valeurs_donnees  # noqa: F401 (réexportés)
 
 REFERENCE = Path(__file__).resolve().parent / 'ressources' / 'arretes-rh-reference.json'
-SOURCES_FIXES = ('R421-1', 'L2131-2')  # voies de recours ; absence de transmission obligatoire au représentant de l'État
+SOURCES_FIXES = ('R421-1', 'L2131-1', 'L2131-2')  # recours, notification et transmission selon la nature de la décision
 STATUT = 'Vu le décret portant statut particulier du cadre d’emplois des [à compléter],'
 TEMPS_PARTIEL = ('Vu le décret n° 2004-777 du 29 juillet 2004 relatif à la mise en œuvre du temps partiel dans la fonction publique '
                  'territoriale,', 'Vu la délibération du [à compléter] fixant les modalités d’exercice du travail à temps partiel,')
 REMUNERATION = ('Rémunération : fraction du traitement égale à la quotité, sauf 80 % et 90 %, rémunérés aux six septièmes et aux '
                 'trente-deux trente-cinquièmes (article L612-5).')
-TRANSMISSION = ('Arrêté individuel relatif à un fonctionnaire : il ne figure pas parmi les actes à transmettre au représentant de '
-                'l’État (article L2131-2 du CGCT) ; il devient exécutoire dès sa notification à l’agent.')
+TRANSMISSION_NOMINATION = ('Pour une nomination stagiaire par recrutement direct ou après concours, prévoir la transmission '
+                          'au représentant de l’État en plus de la notification à l’agent (CGCT, articles L2131-1 et L2131-2).')
+TRANSMISSION_A_VERIFIER = ('Vérifier les formalités applicables à cette décision individuelle, dont sa notification et, '
+                          'selon sa nature, sa transmission au représentant de l’État (CGCT, articles L2131-1 et L2131-2).')
 PARTIEL = r'\btemps\s+partiel\b(?!\s+(?:pour\s+raison\s+)?therapeutique)'  # le temps partiel thérapeutique relève d'un autre régime
 # Thèmes : (nom, motif sur le texte sans accents, articles visés, visas complémentaires, consigne au modèle, points à
 # vérifier). L'ordre compte : la titularisation avant la nomination (sa demande cite souvent l'arrêté de nomination), le
@@ -96,7 +98,13 @@ def textes(dossier=None, hors_ligne=True) -> dict:
 
 def theme(texte: str):
     simple = _plain(texte)
-    return next((t for t in THEMES if re.search(t[1], simple)), None)
+    retenu = next((t for t in THEMES if re.search(t[1], simple)), None)
+    if retenu and retenu[0].startswith('temps_partiel'):
+        regimes = re.findall(PARTIEL + r'\s+(sur autorisation|de droit)\b', simple)
+        if regimes:
+            nom = 'temps_partiel' if regimes[-1] == 'sur autorisation' else 'temps_partiel_droit'
+            return next(t for t in THEMES if t[0] == nom)
+    return retenu
 
 
 def est_demande(question: str, precedent=None, assistant: str = '') -> bool:
@@ -155,22 +163,34 @@ def requete(donnees: dict, modele: str, sources: dict) -> dict:
             'temperature': 0.1, 'max_tokens': REDACTION_MAX}
 
 
-def _autorite(nom_collectivite: str) -> tuple[str, str, str]:
-    """(formule d'autorité, titre court, lieu) : « Le Maire de la commune de Démoville », « Le Maire », « Démoville »."""
+def _autorite(nom_collectivite: str, contexte: str = '') -> tuple[str, str, str]:
+    """Formule, titre et lieu de signature de l'autorité de la collectivité."""
     lieu = lieu_communal(nom_collectivite)
+    intercommunal = re.search(r'\b(communaute|agglomeration|metropole|syndicat)\b', _plain(nom_collectivite))
+    fonction = 'president(?:e)?' if intercommunal else 'maire'
+    institution = r"(?:de (?:la |l[’'])?(?:communaute|commune|metropole|agglomeration)|du syndicat)"
+    sujet = rf"(le|la) ({fonction})"
+    motif = (rf"\b{sujet}(?: {institution}[^.;!?\n]{{0,65}}?)? (?:signe|signera)\b"
+             rf"|\b(?:signataire\s*[:=]|signe[e]? par)\s*{sujet}\b(?! (?:du centre|de l.association))")
+    signataire = list(re.finditer(motif, _plain(contexte)))
+    feminin = bool(signataire and 'la' in signataire[-1].groups())
+    if intercommunal:
+        titre = 'La Présidente' if feminin else 'Le Président'
+        nom = nom_collectivite[0].lower() + nom_collectivite[1:]
+        liaison = 'du ' if nom.startswith('syndicat') else 'de l’' if nom.startswith('agglomération') else 'de la '
+        return titre + ' ' + liaison + nom, titre, ''
+    titre = 'La Maire' if feminin else 'Le Maire'
     if lieu:
         suite = nom_collectivite.strip().split(None, 1)[1]
-        return 'Le Maire de la commune ' + suite[0].lower() + suite[1:], 'Le Maire', lieu
-    if re.search(r'\b(communaute|agglomeration|metropole|syndicat)\b', _plain(nom_collectivite)):
-        return 'Le Président de la ' + nom_collectivite[0].lower() + nom_collectivite[1:], 'Le Président', ''
-    return 'Le Maire', 'Le Maire', ''
+        return titre + ' de la commune ' + suite[0].lower() + suite[1:], titre, lieu
+    return titre, titre, ''
 
 
 def assembler(donnees: dict, genere: dict, sources: dict, logo=None) -> dict:
     """Document complet, commun à l'aperçu et au Word ; les visas propres au cadre d'emplois restent à compléter."""
     nom, _, articles, complements, _, points = theme(donnees['contexte'])
     collectivite_nom = donnees.get('collectivite') or '[Collectivité à préciser]'
-    autorite, titre, lieu = _autorite(collectivite_nom)
+    autorite, titre, lieu = _autorite(collectivite_nom, donnees['contexte'])
     decisions = [{'role': 'decision', 'title': '', 'texte': t} for t in genere['decisions']]
     fixes = [{'role': 'execution', 'title': 'Exécution',
               'texte': 'Le directeur général des services est chargé de l’exécution du présent arrêté, qui sera notifié à '
@@ -190,8 +210,11 @@ def assembler(donnees: dict, genere: dict, sources: dict, logo=None) -> dict:
         'vote': '', 'decision': 'ARRÊTE', 'articles': tous,
         'lieu_date': f'Fait à {lieu}, le [date de signature]' if lieu else 'Fait le [date de signature]',
         'signatures': [f'{titre}, [nom et signature]', 'Notifié à l’intéressé(e) le [date] — signature de l’agent :'],
-        'certification': f'{titre} certifie sous sa responsabilité le caractère exécutoire du présent arrêté, notifié à '
-                         'l’intéressé(e) le [date].',
+        'certification': ('Caractère exécutoire à certifier après notification à l’intéressé(e) le [date] et transmission '
+                          'au représentant de l’État le [date].' if nom == 'nomination' else
+                          'Caractère exécutoire à certifier après notification à l’intéressé(e) le [date] et, '
+                          'si elle est requise, transmission au représentant de l’État le [date].'),
         'signature': '', 'logo': logo or {}, 'theme': nom,
-        'points': list(points) + ([TRANSMISSION] if 'L2131-2' in sources else []),
+        'points': list(points) + ([TRANSMISSION_NOMINATION if nom == 'nomination' else TRANSMISSION_A_VERIFIER]
+                                  if 'L2131-2' in sources and 'L2131-1' in sources else []),
     }

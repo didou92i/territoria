@@ -2,8 +2,7 @@
 
 Depuis le 1er juillet 2022, les actes de la collectivité sont rendus publics **sur son site internet**, en entier, dans
 un format non modifiable, avec leur date de mise en ligne. Avant cela, il faut retirer les données personnelles qui n'ont
-pas à être diffusées. La page **Publication** de TerritorIA prépare tout cela, **sans rien envoyer sur Internet** : vous
-déposez ensuite vous-même le dossier sur le site.
+pas à être diffusées. La page **Publication** prépare le dossier sur le serveur TerritorIA. Vous le déposez ensuite vous-même sur le site.
 
 Ce guide n'est pas un avis juridique.
 
@@ -19,14 +18,15 @@ Dans **Administration › Collectivité** (administrateur) :
 1. **Ajouter un acte**, page Publication :
    - **un acte du registre** : son numéro (celui attribué par TerritorIA), la date de l'acte et, pour une délibération,
      sa matière ;
-   - ou **la version signée** : le fichier (Word, ou PDF texte), le type, le numéro, la date, l'objet et la matière.
+   - ou **la version signée** : le fichier texte (Word ou PDF dont le contenu est entièrement restituable), le type, le numéro, la date, l'objet et la matière.
+   Un dépôt contenant un plan, une image ou une présentation que l’export ne peut restituer est refusé. Préservez les annexes et traitez ces dossiers dans le circuit de publication de la collectivité.
 2. **Repérer les données personnelles** : TerritorIA propose les passages à masquer :
    - par des règles sûres : courriels, téléphones, adresses, dates de naissance, n° de sécurité sociale, IBAN,
      immatriculations. Une adresse n'est cochée d'office que si elle suit une personne (« demeurant », « M. ») : celle
      d'un arrêté de police (« au droit du 4 rue de la République ») reste visible, sauf si vous la cochez ;
-   - par l'IA : les noms de personnes, gardés seulement s'ils figurent dans l'acte, et le nom de famille seul (« M.
+   - avec un modèle local configuré, les noms de personnes, gardés seulement s'ils figurent dans l'acte, et le nom de famille seul (« M.
      MARTIN » plus bas). Les particuliers sont cochés ; les élus et les agents, dont le nom se publie en principe, sont
-     décochés. Si l'IA n'a pas pu chercher les noms, un avertissement reste affiché jusqu'à la validation.
+     décochés. Avec un fournisseur IA en ligne, seules les règles locales s’appliquent au repérage. Relisez alors les noms et masquez-les manuellement. Un avertissement reste affiché jusqu’à la validation.
 3. **Relire** : en jaune, ce qui sera masqué ; en gris, ce qui restera visible. Cochez, décochez, ou sélectionnez un passage
    dans le texte puis cliquez **Masquer la sélection**. Un passage coché est masqué **partout** dans l'acte, objet compris.
    **Lisez l'acte en entier** : l'IA peut oublier un nom.

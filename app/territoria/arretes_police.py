@@ -16,8 +16,8 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from . import trames
-from .deliberations import ReferenceInventee, _plain, lire  # noqa: F401 (réexportés)
+from . import deliberations, trames
+from .deliberations import ReferenceInventee, _plain  # noqa: F401 (réexportés)
 
 REFERENCE = Path(__file__).resolve().parent / 'ressources' / 'arretes-police-reference.json'
 SOURCES_FIXES = ('L2131-1', 'L2131-2', 'R421-1')
@@ -25,6 +25,9 @@ RECOURS = ('Le présent arrêté peut faire l’objet d’un recours devant le t
            'délai de deux mois à compter de sa {depart}. Le tribunal peut être saisi par l’application Télérecours citoyens '
            'accessible sur le site www.telerecours.fr.')
 DEMANDE = 'Vu, le cas échéant, la demande présentée par [à compléter] le [à compléter],'
+REGLE_SIGNALISATION = ('conformément à l’instruction interministérielle sur la signalisation routière '
+                       '(huitième partie, signalisation temporaire). Les prescriptions du présent arrêté sont applicables '
+                       'dès la mise en place de cette signalisation.')
 # Thèmes, du plus précis au plus général : une demande qui touche la circulation (rue barrée près d'un échafaudage)
 # relève d'abord de l'arrêté de circulation.
 THEMES = (
@@ -44,9 +47,7 @@ THEMES = (
                  'interdit le stationnement, considéré comme gênant, sur la section concernée.',
      'fixes': (('signalisation', 'Signalisation',
                 'La signalisation temporaire est mise en place, entretenue et retirée par [l’entreprise chargée des travaux ou les '
-                'services techniques, à préciser], conformément à l’instruction interministérielle sur la signalisation routière '
-                '(huitième partie, signalisation temporaire). Les prescriptions du présent arrêté sont applicables dès la mise en place '
-                'de cette signalisation.'),
+                'services techniques, à préciser], ' + REGLE_SIGNALISATION),
                ('controle', 'Contrôle et sanctions',
                 'Les infractions au présent arrêté sont constatées par les agents légalement habilités et poursuivies conformément aux '
                 'lois et règlements en vigueur.'),
@@ -155,5 +156,135 @@ FAMILLE = trames.Famille(
     role_decision='mesure',
     point_intercommunal='Ces mesures relèvent des pouvoirs de police du maire : vérifier la compétence de l’établissement (transfert '
                         'prévu à l’article L5211-9-2 du CGCT).')
-textes, theme, est_demande, preparer, requete, assembler = (FAMILLE.textes, FAMILLE.theme, FAMILLE.est_demande, FAMILLE.preparer,
-                                                             FAMILLE.requete, FAMILLE.assembler)
+textes, theme, est_demande, requete = FAMILLE.textes, FAMILLE.theme, FAMILLE.est_demande, FAMILLE.requete
+
+_OPERATIONS = {
+    'pose': r'\b(?:pos(?:e|ent|er|ee?s?)|install\w*|mi(?:se?s?|s) en place|met(?:tre|tent)? en place)\b',
+    'entretien': r'\b(?:entretien\w*|entreten\w*|maintien\w*|mainten\w*)\b',
+    'retrait': r'\b(?:retir\w*|retrait|enlev\w*|depos\w*)\b',
+}
+_AGENT = r"(?:l[’']entreprise|la soci[ée]t[ée]|les services techniques|le service (?:technique|voirie))"
+_VERBE = r"(?:qui\s+(?:les?\s+)?)?(?:(?:est|sont)\s+charg[ée]e?s?\s+de|pos\w*|install\w*|met\w*|entreti\w*|retir\w*|enl[èe]v\w*|assur\w*)"
+_ACTIF = re.compile(rf"(?P<agent>{_AGENT}[^,;:.!?]{{0,120}}?)\s+(?P<action>{_VERBE}\b.*)$", re.I)
+_PASSIF = re.compile(r"(?:\bsignalisation|\bpanneaux?)\b(?P<action>[^;:.!?]{0,160}?)\bpar\s+(?P<agent>[^,;:.!?]{1,120})$", re.I)
+_LIBELLE = re.compile(r"(?:ex[ée]cutant|responsable) de la signalisation\s*:\s*([^,;.!?]{1,120})$", re.I)
+
+
+def _attributions(question: str, precedentes: dict) -> dict:
+    attributions = dict(precedentes)
+    for phrase in re.split(r'[;.!?\n]', question):
+        simple = _plain(phrase)
+        if not re.search(r'\b(?:signalisation|panneaux?)\b', simple):
+            continue
+        if re.search(r"\b(?:ne|non|pas|si|pourrait|peut-etre)\b|\bn[’']", simple):
+            if re.search(r"\b(?:ne|n[’']).{0,60}\b(?:pas|plus)\b", simple):
+                for cle, agent in list(attributions.items()):
+                    if _plain(agent) in simple and re.search(_OPERATIONS[cle], simple):
+                        del attributions[cle]
+            continue
+        libelle = _LIBELLE.search(phrase)
+        if libelle:
+            attributions = dict.fromkeys(_OPERATIONS, libelle[1].strip())
+            continue
+        actif = _ACTIF.search(phrase)
+        action = actif or _PASSIF.search(phrase)
+        if not action:
+            continue
+        agent = action['agent'].strip()
+        # Un second acteur impose de préciser la répartition.
+        if actif and re.search(_AGENT, action['action'], re.I):
+            continue
+        verbes = _plain(action['action'] if actif else phrase[:action.start('agent')])
+        operations = [cle for cle, motif in _OPERATIONS.items() if re.search(motif, verbes)]
+        if not operations and re.search(r'\bassur\w*\s+la signalisation|\bsignalisation\s+(?:est|sera)\s+assuree\b', verbes):
+            operations = list(_OPERATIONS)
+        for cle in operations:
+            attributions[cle] = agent[0].lower() + agent[1:] if re.match(r"^(?:l[’']|la |le |les )", agent, re.I) else agent
+    return attributions
+
+
+def preparer(question, precedent, collectivite_enregistree):
+    donnees, clarification = FAMILLE.preparer(question, precedent, collectivite_enregistree)
+    anciennes = (precedent or {}).get('inputs', {}) if (precedent or {}).get('kind', '').startswith(FAMILLE.kind) else {}
+    attributions = anciennes.get('executants_signalisation')
+    if attributions is None:
+        attributions = _attributions(anciennes.get('contexte', ''), {})
+    if donnees.get('decisions_precedentes'):
+        donnees['derniere_precision'] = question
+        if not donnees['contexte'].endswith(question):
+            donnees['contexte'] += '\n\nPrécision la plus récente, prioritaire :\n' + question
+    donnees['executants_signalisation'] = _attributions(question, attributions)
+    return donnees, clarification
+
+
+# Une révision ciblée peut changer les valeurs annoncées dans les prescriptions existantes.
+_CHAMPS = {
+    'horaire': (r'horair|heure|\d\s*h', re.compile(r'\b\d{1,2}\s*(?:h(?:eures?)?\b(?:\s*\d{1,2}\b)?|h\d{2}\b|:\d{2}\b)', re.I)),
+    'date': (r'date|p[ée]riode|dur[ée]e|prolong|d[ée]cal|jour|semaine|mois', re.compile(
+        r'\b\d{1,2}(?:er)?\s+(?:janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)(?:\s+\d{4})?'
+        r'|\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{1,2}(?=\s+au\s+\d)|\b\d+\s+(?:jours?|semaines?|mois)\b', re.I)),
+    'montant': (r'montant|redevance|tarif|euros?|€', deliberations._MONTANT),
+    'voie': (r'\b(?:lieu|voie|tronçon|itin[ée]raire|d[ée]viation|rue|avenue|boulevard|quai|impasse|place|chemin|route)', re.compile(
+        r'\b(?i:rue|avenue|place|boulevard|quai|impasse|chemin|route|allée)\s+'
+        r"(?:(?i:de la|du|des|de l[’']|de)\s*)?[A-ZÀ-ÖØ-Þ][\w’'‑-]*(?:\s+[A-ZÀ-ÖØ-Þ][\w’'‑-]*)*")),
+}
+
+
+def _valeurs_champ(nom, motif, texte):
+    if nom == 'montant':
+        return deliberations._montants(texte)
+    return [re.sub(r'\s+', '', m[0].casefold()) for m in motif.finditer(texte)]
+
+
+def _revision_fidele(question, precedentes, nouvelles):
+    champs = {nom: motif for nom, (declencheur, motif) in _CHAMPS.items()
+              if re.search(declencheur, question, re.I) or motif.search(question)}
+    ajout = bool(re.search(r'\b(?:ajout|inser|inclu|rajout)\w*', _plain(question)))
+    if not champs and not ajout and 'signalisation' not in _plain(question):
+        return True
+    ancien, nouveau = '\n'.join(precedentes), '\n'.join(nouvelles)
+    autorisees = {nom: set(_valeurs_champ(nom, motif, question)) for nom, motif in champs.items()}
+    for nom, motif in champs.items():
+        avant, apres = set(_valeurs_champ(nom, motif, ancien)), set(_valeurs_champ(nom, motif, nouveau))
+        demande = autorisees[nom]
+        if not (apres - avant <= demande and demande - avant <= apres):
+            return False
+
+    def correspond(ancienne, nouvelle):
+        for nom, motif in champs.items():
+            if nom == 'voie' and 'deviation' in _plain(question) and 'deviation' not in _plain(ancienne):
+                continue
+            avant = _valeurs_champ(nom, motif, ancienne)
+            apres = _valeurs_champ(nom, motif, nouvelle)
+            if any(a != b and b not in autorisees[nom] for a, b in zip(avant, apres)):
+                return False
+            ancienne = motif.sub('{' + nom + '}', ancienne)
+            nouvelle = motif.sub('{' + nom + '}', nouvelle)
+        return ' '.join(ancienne.casefold().split()) == ' '.join(nouvelle.casefold().split())
+
+    if not ajout:
+        return len(precedentes) == len(nouvelles) and all(correspond(a,b) for a,b in zip(precedentes, nouvelles))
+    # Une nouvelle disposition peut être intercalée entre deux anciennes, conservées dans le même ordre.
+    restantes = iter(nouvelles)
+    return all(any(correspond(attendue, ligne) for ligne in restantes) for attendue in precedentes)
+
+
+def lire(completion, donnees):
+    resultat = deliberations.lire(completion, donnees)
+    precision = donnees.get('derniere_precision', '')
+    if precision and not _revision_fidele(precision, donnees.get('decisions_precedentes', []), resultat['decisions']):
+        raise deliberations.ReponseInvalide('La révision change une prescription hors de la correction demandée ou omet la nouvelle valeur. '
+                                            'Le projet précédent et son Word restent disponibles.')
+    return resultat
+
+
+def assembler(donnees, genere, sources, logo=None):
+    document = FAMILLE.assembler(donnees, genere, sources, logo)
+    acteurs = donnees.get('executants_signalisation') or {}
+    for article in document['articles']:
+        if article['role'] != 'signalisation' or not acteurs:
+            continue
+        obligations = 'La pose est assurée par {pose}. L’entretien est assuré par {entretien}. Le retrait est assuré par {retrait}.'
+        clauses = obligations.format_map({cle: acteurs.get(cle, '[à préciser]') for cle in _OPERATIONS})
+        article['texte'] = clauses + ' La signalisation temporaire est réalisée ' + REGLE_SIGNALISATION
+    return document

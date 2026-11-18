@@ -86,7 +86,8 @@ class CollectiviteActesTests(unittest.TestCase):
                 self.assertEqual((acte['collectivite'], acte['autorite'], acte['signatures'][0]),
                                  (COMMUNAUTE, 'Le Président de la communauté de communes du Val-Exemple',
                                   'Le Président, [nom et signature]'))
-                self.assertTrue(acte['certification'].startswith('Le Président certifie'))
+                self.assertIn('après notification', acte['certification'])
+                self.assertIn('transmission au représentant de l’État', acte['certification'])
                 with tempfile.TemporaryDirectory() as tmp:
                     fichier = Path(tmp) / 'projet.docx'
                     arrete_document.create_word(fichier, acte)

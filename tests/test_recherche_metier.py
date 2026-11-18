@@ -11,6 +11,26 @@ import server
 from tests.test_comptes import Base
 
 
+class RechercheConseilTests(Base):
+    def test_quorum_et_procuration_retrouvent_les_deux_dispositions(self):
+        questions = (
+            ('Puis-je voter par procuration ?', {'L2121-20'}),
+            ('Pour un conseil municipal fictif de 29 membres en exercice dont 14 sont physiquement présents '
+             'et 3 ont donné procuration, les pouvoirs comptent-ils pour le quorum de la première réunion ? '
+             'Cite le texte applicable et distingue le vote du quorum.', {'L2121-17', 'L2121-20'}),
+        )
+        for question, attendus in questions:
+            with self.subTest(question=question):
+                resultat = server.search(question, 'public')
+                articles = {r['title'].rsplit(' ', 1)[-1] for r in resultat}
+                self.assertTrue(attendus.issubset(articles), articles)
+                self.assertFalse(server.search(question, 'public', espaces=['interne']))
+
+    def test_procuration_bancaire_ne_declenche_pas_un_resultat_electif(self):
+        resultat = server.search('Procuration bancaire', 'public')
+        self.assertFalse(any(r['title'].endswith('L2121-20') for r in resultat))
+
+
 class RechercheMetierTests(Base):
     def setUp(self):
         super().setUp()

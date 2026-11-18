@@ -22,7 +22,7 @@ Sur ce serveur seulement :
     300 000 caractères chacun, dans un espace qu'il a créé ;
   - 150 documents au plus pour l'ensemble des visiteurs ;
   - 5 espaces, 5 assistants personnels et 80 messages au plus par visiteur ;
-  - aucun partage, et aucun nom des autres comptes ;
+  - le visiteur ne peut pas partager ses propres contenus ni consulter les noms des autres comptes. Il accède aux espaces partagés avec tous les comptes, visiteurs compris ;
   - réservés aux comptes : la transcription des séances (une séance accepte 1 Gio d'audio), les connecteurs
     Légifrance et data.gouv.fr, et le signalement d'une réponse à l'administration ;
   - il cherche par mots-clés : ni ses questions de recherche ni les extraits de ses documents ne sont envoyés au

@@ -80,6 +80,9 @@ class PublicationTests(unittest.TestCase):
         self.base = self.donnees / 'territoire.sqlite3'
         migrer.appliquer(self.base)
 
+    def revision(self, ident):
+        return publication.lire(self.base, self.donnees, ident)['revision']
+
     def creer(self, **valeurs):
         donnees = {'type': 'deliberation', 'numero': 'D2026-012', 'date_acte': '2026-10-14', 'objet': 'Cession d’un terrain',
                    'paragraphes': ['Le conseil municipal,', 'Vu la demande de M. Jean Martin, 12 rue des Lilas ;'],
@@ -123,30 +126,30 @@ class PublicationTests(unittest.TestCase):
         # Review Focus 5 : une validation ne couvre que les passages qu'elle a vus.
         acte = self.creer()
         passage = {'texte': 'Jean Martin', 'categorie': 'nom', 'origine': 'ia', 'coche': True}
-        publication.enregistrer_reperage(self.base, acte['id'], [passage], None)
-        publication.valider(self.base, self.donnees, acte['id'], 'referent')
-        lu = publication.enregistrer_passages(self.base, acte['id'], [passage | {'coche': False}])
+        publication.enregistrer_reperage(self.base, acte['id'], [passage], None, self.revision(acte['id']))
+        publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id']))
+        lu = publication.enregistrer_passages(self.base, acte['id'], [passage | {'coche': False}], self.revision(acte['id']))
         self.assertEqual((lu['statut'], lu['valide_par'], lu['valide_le']), ('a_relire', '', ''))
 
     def test_publie_ne_se_modifie_plus(self):
         acte = self.creer()
-        publication.enregistrer_reperage(self.base, acte['id'], [], None)
-        publication.valider(self.base, self.donnees, acte['id'], 'referent')
-        publication.enregistrer_dossier(self.base, self.donnees, acte['id'], 'e' * 64, b'%PDF', '2026-11-03')
-        publication.marquer_publie(self.base, acte['id'])
+        publication.enregistrer_reperage(self.base, acte['id'], [], None, self.revision(acte['id']))
+        publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id']))
+        publication.enregistrer_dossier(self.base, self.donnees, acte['id'], 'e' * 64, b'%PDF', '2026-11-03', self.revision(acte['id']))
+        publication.marquer_publie(self.base, acte['id'], self.revision(acte['id']))
         with self.assertRaises(PermissionError) as erreur:
-            publication.enregistrer_passages(self.base, acte['id'], [])
+            publication.enregistrer_passages(self.base, acte['id'], [], self.revision(acte['id']))
         self.assertEqual(str(erreur.exception), 'Cet acte est publié : il ne se modifie plus.')
 
     def test_marquer_publie_exige_valide(self):
         acte = self.creer()
         with self.assertRaises(ValueError):
-            publication.marquer_publie(self.base, acte['id'])
+            publication.marquer_publie(self.base, acte['id'], self.revision(acte['id']))
 
     def test_passage_de_categorie_inconnue_refuse(self):
         acte = self.creer()
         with self.assertRaises(ValueError):
-            publication.enregistrer_passages(self.base, acte['id'], [{'texte': 'x', 'categorie': 'autre', 'origine': 'ia', 'coche': True}])
+            publication.enregistrer_passages(self.base, acte['id'], [{'texte': 'x', 'categorie': 'autre', 'origine': 'ia', 'coche': True}], self.revision(acte['id']))
 
     def test_liste_par_proprietaire(self):
         self.creer(par='u1')
@@ -156,6 +159,55 @@ class PublicationTests(unittest.TestCase):
 
 
 class RelectureFinalePublicationTests(PublicationTests):
+    def test_deux_ecritures_simultanees_necrasent_pas_les_masques(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        acte = self.creer()
+        depart = Barrier(2)
+        def enregistrer(texte):
+            depart.wait(timeout=5)
+            try:
+                publication.enregistrer_passages(self.base, acte['id'], [self.passage(texte)], acte['revision'])
+            except publication.RevisionPerimee:
+                return None
+            return texte
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            reponses = list(pool.map(enregistrer, ['Jean Martin', 'Lilas']))
+        gagnants = [r for r in reponses if r is not None]
+        self.assertEqual(len(gagnants), 1)
+        actuel = publication.lire(self.base, self.donnees, acte['id'])
+        self.assertEqual([p['texte'] for p in actuel['passages']], gagnants)
+
+    def test_modification_pendant_le_controle_de_validation(self):
+        from unittest.mock import patch
+        acte = self.creer()
+        ident = acte['id']
+        repere = publication.enregistrer_reperage(self.base, ident, [self.passage()], None, acte['revision'])
+        def edition(*args, **kwargs):
+            publication.enregistrer_passages(self.base, ident, [], repere['revision'])
+        with patch.object(publication, 'verifier_version', side_effect=edition):
+            with self.assertRaises(publication.RevisionPerimee):
+                publication.valider(self.base, self.donnees, ident, 'referent', repere['revision'])
+        actuel = publication.lire(self.base, self.donnees, ident)
+        self.assertEqual((actuel['statut'], actuel['passages'], actuel['valide_par']), ('a_relire', [], ''))
+
+    def test_nouvelle_validation_pendant_le_rendu_annule_tout_le_lot(self):
+        actes = [self.creer(numero=numero) for numero in ('A', 'B')]
+        revisions = {}
+        for acte in actes:
+            ident = acte['id']
+            repere = publication.enregistrer_reperage(self.base, ident, [self.passage()], None, acte['revision'])
+            revisions[ident] = publication.valider(self.base, self.donnees, ident, 'referent', repere['revision'])['revision']
+        produits = {a['id']: {'empreinte': 'e' * 64, 'pdf': b'ancienne copie'} for a in actes}
+        dernier = actes[-1]['id']
+        modification = publication.enregistrer_passages(self.base, dernier, [], revisions[dernier])
+        publication.valider(self.base, self.donnees, dernier, 'referent', modification['revision'])
+        with self.assertRaises(publication.RevisionPerimee):
+            publication.enregistrer_dossiers(self.base, self.donnees, produits, revisions, publication.aujourdhui())
+        for ident in revisions:
+            self.assertFalse((self.donnees / 'publication' / ident / 'publie.pdf').exists())
+            self.assertEqual(publication.lire(self.base, self.donnees, ident)['empreinte_pdf'], '')
+
     """Relecture finale : validation sûre, numéros uniques, suppression, date de mise en ligne, Word fidèle."""
     def passage(self, texte='Jean Martin', coche=True):
         return {'texte': texte, 'categorie': 'nom', 'origine': 'ia', 'coche': coche}
@@ -163,21 +215,21 @@ class RelectureFinalePublicationTests(PublicationTests):
     def test_valider_exige_le_reperage(self):
         acte = self.creer()
         with self.assertRaises(ValueError) as erreur:
-            publication.valider(self.base, self.donnees, acte['id'], 'referent')
+            publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id']))
         self.assertEqual(str(erreur.exception), 'Lancez d’abord le repérage des données personnelles.')
 
     def test_valider_refuse_un_passage_introuvable(self):
         # C1 : un passage coché qui ne figure nulle part ne masquerait rien.
         acte = self.creer()
-        publication.enregistrer_reperage(self.base, acte['id'], [self.passage('12 rue des Lilas\nLe Conseil')], None)
+        publication.enregistrer_reperage(self.base, acte['id'], [self.passage('12 rue des Lilas\nLe Conseil')], None, self.revision(acte['id']))
         with self.assertRaises(ValueError) as erreur:
-            publication.valider(self.base, self.donnees, acte['id'], 'referent')
+            publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id']))
         self.assertIn('introuvable dans le texte', str(erreur.exception))
 
     def test_avertissement_conserve(self):
         # I3 : celui qui valide voit que les noms n'ont pas été cherchés.
         acte = self.creer()
-        lu = publication.enregistrer_reperage(self.base, acte['id'], [], 'Les noms n’ont pas été repérés automatiquement : relisez l’acte en entier.')
+        lu = publication.enregistrer_reperage(self.base, acte['id'], [], 'Les noms n’ont pas été repérés automatiquement : relisez l’acte en entier.', self.revision(acte['id']))
         self.assertTrue(lu['avertissement'].startswith('Les noms n’ont pas été repérés'))
         self.assertTrue(lu['repere_le'])
 
@@ -188,27 +240,46 @@ class RelectureFinalePublicationTests(PublicationTests):
             self.creer(numero='D2026/012')
         self.assertEqual(str(erreur.exception), 'Ce numéro est déjà dans les actes à publier.')
 
+    def test_deux_corrections_simultanees_du_meme_acte(self):
+        from concurrent.futures import ThreadPoolExecutor
+        from threading import Barrier
+        ancien = self.publie()
+        publication.retirer(self.base, ancien['id'], 'Correction', 'referent', self.revision(ancien['id']))
+        depart = Barrier(2)
+
+        def corriger():
+            depart.wait(timeout=5)
+            try:
+                return self.creer()['remplace_id']
+            except ValueError as erreur:
+                return str(erreur)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            resultats = [pool.submit(corriger) for _ in range(2)]
+        self.assertCountEqual([f.result() for f in resultats], [ancien['id'], 'Ce numéro est déjà dans les actes à publier.'])
+        self.assertCountEqual([a['statut'] for a in publication.liste(self.base)], ['retire', 'a_relire'])
+
     def test_supprimer(self):
         acte = self.creer()
-        publication.supprimer(self.base, self.donnees, acte['id'])
+        publication.supprimer(self.base, self.donnees, acte['id'], self.revision(acte['id']))
         self.assertEqual(publication.liste(self.base), [])
         self.assertFalse((self.donnees / 'publication' / acte['id']).exists())
 
     def test_supprimer_un_acte_publie_refuse(self):
         acte = self.publie()
         with self.assertRaises(PermissionError):
-            publication.supprimer(self.base, self.donnees, acte['id'])
+            publication.supprimer(self.base, self.donnees, acte['id'], self.revision(acte['id']))
 
     def publie(self, date='2026-11-03'):
         acte = self.creer()
-        publication.enregistrer_reperage(self.base, acte['id'], [self.passage()], None)
-        publication.valider(self.base, self.donnees, acte['id'], 'referent')
-        publication.enregistrer_dossier(self.base, self.donnees, acte['id'], 'e' * 64, b'%PDF', date)
-        return publication.marquer_publie(self.base, acte['id'])
+        publication.enregistrer_reperage(self.base, acte['id'], [self.passage()], None, self.revision(acte['id']))
+        publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id']))
+        publication.enregistrer_dossier(self.base, self.donnees, acte['id'], 'e' * 64, b'%PDF', date, self.revision(acte['id']))
+        return publication.marquer_publie(self.base, acte['id'], self.revision(acte['id']))
 
     def test_retrait_d_un_acte_publie_garde_la_preuve(self):
         acte = self.publie()
-        retire = publication.retirer(self.base, acte['id'], '  Publié par erreur : donnée personnelle visible.  ', 'referent')
+        retire = publication.retirer(self.base, acte['id'], '  Publié par erreur : donnée personnelle visible.  ', 'referent', self.revision(acte['id']))
         self.assertEqual((retire['statut'], retire['retire_motif'], retire['retire_par']),
                          ('retire', 'Publié par erreur : donnée personnelle visible.', 'referent'))
         self.assertTrue(retire['retire_le'])
@@ -219,22 +290,22 @@ class RelectureFinalePublicationTests(PublicationTests):
         acte = self.publie()
         for motif in ('', '   '):
             with self.assertRaises(ValueError) as erreur:
-                publication.retirer(self.base, acte['id'], motif, 'referent')
+                publication.retirer(self.base, acte['id'], motif, 'referent', self.revision(acte['id']))
             self.assertEqual(str(erreur.exception), 'Indiquez le motif du retrait.')
         with self.assertRaises(ValueError):
-            publication.retirer(self.base, acte['id'], 'x' * 301, 'referent')
+            publication.retirer(self.base, acte['id'], 'x' * 301, 'referent', self.revision(acte['id']))
         a_relire = self.creer(numero='D2026-777')
         with self.assertRaises(ValueError) as erreur:
-            publication.retirer(self.base, a_relire['id'], 'Motif', 'referent')
+            publication.retirer(self.base, a_relire['id'], 'Motif', 'referent', self.revision(a_relire['id']))
         self.assertEqual(str(erreur.exception), 'Seul un acte publié peut être retiré de la publication.')
 
     def test_un_acte_retire_ne_se_modifie_ni_ne_se_supprime(self):
         acte = self.publie()
-        publication.retirer(self.base, acte['id'], 'Motif', 'referent')
-        for appel in (lambda: publication.enregistrer_passages(self.base, acte['id'], []),
-                      lambda: publication.valider(self.base, self.donnees, acte['id'], 'referent'),
-                      lambda: publication.supprimer(self.base, self.donnees, acte['id']),
-                      lambda: publication.retirer(self.base, acte['id'], 'Encore', 'referent')):
+        publication.retirer(self.base, acte['id'], 'Motif', 'referent', self.revision(acte['id']))
+        for appel in (lambda: publication.enregistrer_passages(self.base, acte['id'], [], self.revision(acte['id'])),
+                      lambda: publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id'])),
+                      lambda: publication.supprimer(self.base, self.donnees, acte['id'], self.revision(acte['id'])),
+                      lambda: publication.retirer(self.base, acte['id'], 'Encore', 'referent', self.revision(acte['id']))):
             with self.assertRaises((PermissionError, ValueError)):
                 appel()
         self.assertTrue((self.donnees / 'publication' / acte['id'] / 'publie.pdf').exists())
@@ -247,10 +318,10 @@ class RelectureFinalePublicationTests(PublicationTests):
 
     def test_mise_en_ligne_exige_un_dossier(self):
         acte = self.creer()
-        publication.enregistrer_reperage(self.base, acte['id'], [], None)
-        publication.valider(self.base, self.donnees, acte['id'], 'referent')
+        publication.enregistrer_reperage(self.base, acte['id'], [], None, self.revision(acte['id']))
+        publication.valider(self.base, self.donnees, acte['id'], 'referent', self.revision(acte['id']))
         with self.assertRaises(ValueError) as erreur:
-            publication.marquer_publie(self.base, acte['id'])
+            publication.marquer_publie(self.base, acte['id'], self.revision(acte['id']))
         self.assertEqual(str(erreur.exception), 'Préparez d’abord le dossier de publication.')
 
     def test_word_dans_l_ordre_avec_tableaux_imbriques_controles_et_insertions(self):

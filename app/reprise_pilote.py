@@ -18,9 +18,10 @@ ne sont ni suivis ni copiés.
 Source et cible ne doivent ni être le même dossier ni s'imbriquer (liens symboliques résolus) : rien n'est créé avant ce
 contrôle, pour que la reprise ne puisse jamais écrire dans le pilote.
 
-Une cible qui contient des données de l'utilisateur est refusée, sauf avec `forcer` : au moins une conversation, un
-document autre que celui de départ, un assistant personnalisé, une bibliothèque d'arrêtés ou un modèle de référence autres
-que ceux de démonstration, ou une base illisible. Un espace n'est une donnée que si un document ou une conversation s'y
+Une cible qui contient des données métier est refusée, sauf avec `forcer` : actes, séances, comptes, conversations,
+documents ajoutés, réglages personnalisés ou lignes de toute nouvelle table métier. Une bibliothèque d'arrêtés ou un
+modèle de référence étrangers à la démonstration, une base illisible ou une identité documentaire qui serait remplacée
+exigent aussi `forcer`. Un espace n'est une donnée que si un document ou une conversation s'y
 rattache (l'essai de bout en bout laisse un espace vide). Une cible neuve (base créée par `server.init()`) ou qui ne
 contient que le corpus de démonstration est acceptée, et ce corpus est remplacé.
 
@@ -196,16 +197,26 @@ def _base_avec_donnees(base: Path) -> bool:
     Un espace n'est une donnée que si un document ou une conversation s'y rattache (R2b) : l'essai de bout en bout laisse
     un espace vide, et les espaces ne peuvent pas être supprimés. Tout document autre que celui de départ et toute
     conversation sont déjà comptés ci-dessous, ce qui couvre les espaces qu'ils référencent."""
-    controles = (('conversations', 'SELECT 1 FROM conversations LIMIT 1', ()),
-                 ('documents', "SELECT 1 FROM documents WHERE id != ? AND substr(id, 1, ?) != ? LIMIT 1",
-                  (DOCUMENT_INITIAL, len(fonds_publics.PREFIXE), fonds_publics.PREFIXE)),
-                 ('assistants', 'SELECT 1 FROM assistants WHERE custom != 0 LIMIT 1', ()))
+    # Le journal du parcours de vérification et les index du corpus livré restent sur un poste neuf.
+    initiales = {'schema_migrations', 'spaces', 'activite', 'chunks', 'chunk_vecteurs'}
+    filtres = {
+        'documents': ("id != ? AND substr(id, 1, ?) != ?", (DOCUMENT_INITIAL, len(fonds_publics.PREFIXE), fonds_publics.PREFIXE)),
+        'assistants': ('custom != 0', ()),
+        'parametres': ('cle NOT IN (?, ?)', ('assistants_installes', fonds_publics.CLE)),
+    }
     try:
         connexion = sqlite3.connect(f'{base.resolve().as_uri()}?mode=ro', uri=True, timeout=5)
         try:
-            tables = {ligne[0] for ligne in connexion.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-            return any(table in tables and connexion.execute(requete, parametres).fetchone() is not None
-                       for table, requete, parametres in controles)
+            tables = connexion.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            for (table,) in tables:
+                if table in initiales or table.startswith('sqlite_'):
+                    continue
+                # Toute table ajoutée dans une version ultérieure est protégée dès sa première ligne.
+                nom_sql = '"' + table.replace('"', '""') + '"'
+                condition, valeurs = filtres.get(table, ('1', ()))
+                if connexion.execute(f'SELECT 1 FROM {nom_sql} WHERE {condition} LIMIT 1', valeurs).fetchone():
+                    return True
+            return False
         finally:
             connexion.close()
     except sqlite3.Error:
@@ -222,14 +233,26 @@ def _reference_etrangere(cible: Path) -> bool:
     return info['reference'] != demo.REFERENCE or info['trame'] != demo.TRAME
 
 
-def _cible_avec_donnees(cible: Path) -> bool:
+def _identite_presente(dossier: Path) -> bool:
+    try:
+        if not stat.S_ISDIR(os.lstat(dossier).st_mode):
+            return True
+        return any(dossier.iterdir())
+    except FileNotFoundError:
+        return False
+    except OSError:
+        return True  # Une identité illisible doit aussi être protégée.
+
+
+def _cible_avec_donnees(cible: Path, *, remplace_identite: bool = True) -> bool:
     """Vrai si la cible contient autre chose qu'une base neuve et le corpus de démonstration."""
     if not os.path.lexists(cible):
         return False
     base = cible / BASE
     return ((os.path.lexists(base) and _base_avec_donnees(base))
             or demo._bibliotheque_etrangere(cible / 'bibliotheque-arretes' / 'manifest.json')
-            or _reference_etrangere(cible))
+            or _reference_etrangere(cible)
+            or (remplace_identite and _identite_presente(cible / 'identite')))
 
 
 # --- Copie ------------------------------------------------------------------------------------------------------------
@@ -454,7 +477,7 @@ def importer(source: Path, cible: Path, forcer: bool = False, exiger_conformite:
     if os.path.lexists(cible):
         if not cible.is_dir():
             raise NotADirectoryError("La cible n'est pas un dossier.")
-        if not forcer and _cible_avec_donnees(cible):
+        if not forcer and _cible_avec_donnees(cible, remplace_identite=_dossier_reel(source / 'identite')):
             raise CibleNonVide()
     else:
         cible.mkdir(mode=0o700, parents=True)

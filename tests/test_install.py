@@ -276,6 +276,49 @@ class DiagnosticTests(unittest.TestCase):
         self.assertEqual(self.bac.contenu_home(), [])
 
 
+class VolumeDonneesTests(unittest.TestCase):
+    def setUp(self):
+        self.bac = Bac()
+        self.addCleanup(self.bac.nettoyer)
+        self.parent = self.bac.base / 'stockage externe'
+        self.parent.mkdir()
+        self.cible = self.parent / 'futur' / 'donnees'
+        commande_factice(self.bac.factices, 'uname', 'printf "%s\\n" "$FAUX_SYSTEME"\n')
+
+    def chiffrement(self, systeme, **variables):
+        env = self.bac.env(FAUX_SYSTEME=systeme, PARENT=str(self.parent.resolve()),
+                           TERRITORIA_DONNEES_HOTE=str(self.cible), **variables)
+        resultat = lancer([INSTALL / 'diagnostic.sh'], env)
+        self.assertEqual(resultat.returncode, 0, resultat.stderr)
+        return dict(ligne.split('=', 1) for ligne in resultat.stdout.splitlines())['chiffrement_disque']
+
+    def test_linux_ne_compte_que_la_chaine_du_volume_cible(self):
+        commande_factice(self.bac.factices, 'findmnt', 'for dernier do :; done\n'
+                         '[ "$dernier" = "$PARENT" ] || exit 1\nprintf "%s\\n" "$MONTAGE"\n')
+        commande_factice(self.bac.factices, 'lsblk', 'for dernier do :; done\n'
+                         'if [ "$dernier" = "/dev/block/8:4" ]; then printf "%b\\n" "$CHAINE"; '
+                         'else printf "TYPE\\ndisk\\npart\\ndisk\\ncrypt\\n"; fi\n')
+        for montage, chaine, attendu in [('ext4 8:4', 'part\\ndisk', 'inactif'),
+                                        ('ext4 8:4', 'lvm\\ncrypt\\npart\\ndisk', 'actif'),
+                                        ('ext4 8:4', 'lvm\\ncrypt\\npart\\ndisk\\npart\\ndisk', 'inconnu'),
+                                        ('nfs 8:4', 'crypt\\npart\\ndisk', 'inconnu'), ('', '', 'inconnu')]:
+            with self.subTest(montage=montage, chaine=chaine):
+                self.assertEqual(self.chiffrement('Linux', MONTAGE=montage, CHAINE=chaine), attendu)
+
+    def test_macos_interroge_le_volume_des_donnees(self):
+        commande_factice(self.bac.factices, 'df', 'for dernier do :; done\n'
+                         '[ "$dernier" = "$PARENT" ] || exit 1\nprintf "Filesystem blocks used available Capacity Mounted on\\n/dev/disk9s2 42 10 32 23%% /Volumes/Essai\\n"\n')
+        commande_factice(self.bac.factices, 'diskutil', '[ "$*" = "info -plist /dev/disk9s2" ] || exit 1\ncat "$PLIST"\n')
+        commande_factice(self.bac.factices, 'fdesetup', 'echo "FileVault is On."\n')
+        commande_factice(self.bac.factices, 'plutil', '[ "$2" = FileVault ] || exit 1\n'
+                         "awk '/<key>FileVault<\\/key>/{getline; if (/true/) print \"true\"; if (/false/) print \"false\"}'\n")
+        for champs, attendu in [({'FileVault': True}, 'actif'), ({'FileVault': False}, 'inactif'), ({}, 'inconnu')]:
+            with self.subTest(champs=champs):
+                plist = self.bac.base / 'disque.plist'
+                plist.write_bytes(plistlib.dumps(champs))
+                self.assertEqual(self.chiffrement('Darwin', PLIST=str(plist)), attendu)
+
+
 class SimulationTests(unittest.TestCase):
     """--simulation : dernière ligne « ETAPE <nom> : OK », aucune commande lancée, rien créé, aucune question."""
 
@@ -480,7 +523,8 @@ class CorrectifsRevueTests(unittest.TestCase):
     def test_paquet_compose_selon_apt_cache_policy(self):
         politique = ('case "$2" in docker.io) c="${DOCKER_IO:-24.0.7}";; docker-compose-v2) c="${V2:-(none)}";; '
                      'docker-compose-plugin) c="${PLUGIN:-(none)}";; *) c="(none)";; esac\n'
-                     'printf "%s:\\n  Installed: (none)\\n  Candidate: %s\\n" "$2" "$c"\n')
+                     'if [ "$LC_ALL" = C ]; then label="Candidate:"; else label="Candidat :"; fi\n'
+                     'printf "%s:\\n  Installed: (none)\\n  %s %s\\n" "$2" "$label" "$c"\n')
         commande_factice(self.outils, 'apt-cache', politique)
         for variables, attendu in (({'V2': '2.24.6'}, 'docker-compose-v2'), ({'PLUGIN': '2.29.1'}, 'docker-compose-plugin'),
                                    ({'V2': '2.24.6', 'PLUGIN': '2.29.1'}, 'docker-compose-v2'), ({}, '')):

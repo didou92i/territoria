@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 import outils
 import sauvegarde
+from territoria.base.migrations import m0001_socle, m0013_publications, m0015_publications_retrait
 
 FICHIERS_ATTENDUS = {
     'territoria/territoire.sqlite3', 'territoria/documents/piece.txt', 'n8n/database.sqlite', 'n8n/config',
@@ -79,8 +80,10 @@ class Base(unittest.TestCase):
         (territoria / 'documents').mkdir(parents=True)
         (territoria / 'vide').mkdir()
         base = sqlite3.connect(territoria / 'territoire.sqlite3')
-        base.execute('create table spaces(id integer primary key, title text)')
-        base.execute("insert into spaces(title) values ('Espace fictif')")
+        m0001_socle.appliquer(base)
+        base.execute("INSERT INTO spaces VALUES ('fictif', 'Espace fictif', '', '2026-11-02')")
+        base.execute("INSERT INTO documents VALUES ('p','fictif','Pièce','piece.txt',?,'','','')",
+                     (hashlib.sha256('Pièce fictive'.encode()).hexdigest(),))
         base.commit()
         base.close()
         (territoria / 'documents' / 'piece.txt').write_text('Pièce fictive', encoding='utf-8')
@@ -108,6 +111,27 @@ class Base(unittest.TestCase):
 
     def creer(self, mot_de_passe='m', maintenant=datetime(2026, 11, 2)):
         return sauvegarde.creer(self.src, self.dest, mot_de_passe, maintenant)
+
+
+    def acte_avec_preuve(self, statut):
+        # Schéma de la première version des publications ; le retrait ajoute ses colonnes en version 15.
+        ident = 'a' * 32
+        relatif = f'territoria/publication/{ident}/publie.pdf'
+        from reportlab.pdfgen.canvas import Canvas
+        octets = io.BytesIO()
+        page = Canvas(octets, invariant=True)
+        page.drawString(72, 700, 'Preuve fictive')
+        page.save()
+        pdf = octets.getvalue()
+        with contextlib.closing(sqlite3.connect(self.src / 'territoria' / 'territoire.sqlite3')) as c:
+            m0013_publications.appliquer(c)
+            if statut == 'retire':
+                m0015_publications_retrait.appliquer(c)
+            c.execute("INSERT INTO publications(id,type,numero,date_acte,objet,source,statut,cree_par,cree_le,empreinte_pdf) "
+                      "VALUES(?, 'arrete', '2026-1', '2026-11-18', 'Objet fictif', 'import', ?, '', '', ?)",
+                      (ident, statut, hashlib.sha256(pdf).hexdigest()))
+            c.commit()
+        return relatif, pdf
 
 
 class AllerRetourTests(Base):
@@ -207,6 +231,73 @@ class AllerRetourTests(Base):
         self.assertEqual(sauvegarde.verifier(a, 'm')['conforme'], True)
         sauvegarde.restaurer(a, self.cible, 'm')
         self.assertFalse((self.cible / 'n8n').exists())
+
+    def test_source_sans_base_refusee(self):
+        (self.src / 'territoria' / 'territoire.sqlite3').unlink()
+        with self.assertRaises(sauvegarde.SourceInvalide):
+            self.creer()
+        self.assertEqual(list(self.dest.iterdir()), [])
+
+    def test_source_n8n_presente_sans_base_refusee(self):
+        (self.src / 'n8n' / 'database.sqlite').unlink()
+        with self.assertRaises(sauvegarde.SourceInvalide):
+            self.creer()
+        self.assertEqual(list(self.dest.iterdir()), [])
+
+    def test_source_n8n_avec_base_vide_refusee(self):
+        (self.src / 'n8n' / 'database.sqlite').write_bytes(b'')
+        with self.assertRaises(sauvegarde.SourceInvalide):
+            self.creer()
+        self.assertEqual(list(self.dest.iterdir()), [])
+
+    def test_source_avec_base_vide_refusee(self):
+        (self.src / 'territoria' / 'territoire.sqlite3').write_bytes(b'')
+        with self.assertRaises(sauvegarde.SourceInvalide):
+            self.creer()
+        self.assertEqual(list(self.dest.iterdir()), [])
+
+    def test_source_avec_piece_manquante_ou_modifiee_refusee(self):
+        piece = self.src / 'territoria' / 'documents' / 'piece.txt'
+        for jour, contenu in enumerate((None, b'piece differente'), start=1):
+            with self.subTest(contenu=contenu):
+                if contenu is None:
+                    piece.unlink()
+                else:
+                    piece.write_bytes(contenu)
+                with self.assertRaises(sauvegarde.SourceInvalide):
+                    self.creer(maintenant=datetime(2026, 11, jour))
+                self.assertEqual(list(self.dest.iterdir()), [])
+
+    def test_sauvegarder_controle_preuve_pdf_publication(self):
+        relatif, pdf = self.acte_avec_preuve('publie')
+        fichier = self.src / relatif
+        fichier.parent.mkdir(parents=True)
+        for jour, contenu in enumerate((None, b'autre PDF', pdf), start=1):
+            with self.subTest(jour=jour):
+                destination = self.base / f'archives-{jour}'
+                destination.mkdir()
+                if contenu is not None:
+                    fichier.write_bytes(contenu)
+                date_archive = datetime(2026, 11, jour)
+                if contenu != pdf:
+                    with self.assertRaises(sauvegarde.SourceInvalide):
+                        sauvegarde.creer(self.src, destination, 'm', date_archive)
+                    self.assertEqual(list(destination.iterdir()), [])
+                else:
+                    archive = sauvegarde.creer(self.src, destination, 'm', date_archive)
+                    sauvegarde.restaurer(archive, self.cible, 'm')
+                    self.assertEqual((self.cible / relatif).read_bytes(), pdf)
+
+    def test_acte_publie_sans_empreinte_refuse(self):
+        relatif, pdf = self.acte_avec_preuve('publie')
+        fichier = self.src / relatif
+        fichier.parent.mkdir(parents=True)
+        fichier.write_bytes(pdf)
+        with contextlib.closing(sqlite3.connect(self.src / 'territoria' / 'territoire.sqlite3')) as c:
+            c.execute("UPDATE publications SET empreinte_pdf=''")
+            c.commit()
+        with self.assertRaises(sauvegarde.SourceInvalide):
+            self.creer()
 
     def test_source_invalide(self):
         with self.assertRaises(ValueError):
@@ -404,10 +495,53 @@ class ArchiveForgeeTests(Base):
         info.type, info.linkname, info.mode = type_, lien, mode_
         return info
 
+    def base_archive(self):
+        nom = 'territoria/territoire.sqlite3'
+        return self.membre(nom), (self.src / nom).read_bytes()
+
+    def piece_archive(self):
+        nom = 'territoria/documents/piece.txt'
+        return self.membre(nom), (self.src / nom).read_bytes()
+
+    def test_archive_incomplete_refusee_avant_remplacement(self):
+        ancienne = self.cible / 'territoria' / 'territoire.sqlite3'
+        ancienne.parent.mkdir()
+        ancienne.write_bytes(b'base a conserver')
+        for nom, membres in (
+                ('sans base', []), ('base vide', [(self.membre('territoria/territoire.sqlite3'), b'')]),
+                ('piece absente', [self.base_archive()]),
+                ('n8n sans base', [self.base_archive(), self.piece_archive(), (self.membre('n8n', tarfile.DIRTYPE), None)]),
+                ('base n8n vide', [self.base_archive(), self.piece_archive(), (self.membre('n8n/database.sqlite'), b'')]),
+                ('piece modifiee', [self.base_archive(), (self.membre('territoria/documents/piece.txt'), b'autre')])):
+            with self.subTest(nom=nom):
+                archive = self.forger((self.membre('territoria', tarfile.DIRTYPE), None), *membres)
+                self.assertFalse(sauvegarde.verifier(archive, 'm')['conforme'])
+                with self.assertRaises(sauvegarde.ArchiveNonConforme):
+                    sauvegarde.restaurer(archive, self.cible, 'm', forcer=True)
+                self.assertEqual(ancienne.read_bytes(), b'base a conserver')
+
+    def test_verifier_et_restaurer_controle_preuve_apres_retrait(self):
+        relatif, pdf = self.acte_avec_preuve('retire')
+        ancien = self.cible / 'territoria' / 'a-garder.txt'
+        ancien.parent.mkdir()
+        ancien.write_text('cible fictive')
+        for contenu in (None, b'autre PDF', pdf):
+            with self.subTest(contenu=contenu):
+                preuve = [(self.membre(relatif), contenu)] if contenu is not None else []
+                archive = self.forger(self.base_archive(), self.piece_archive(), *preuve)
+                self.assertEqual(sauvegarde.verifier(archive, 'm')['conforme'], contenu == pdf)
+                if contenu == pdf:
+                    sauvegarde.restaurer(archive, self.cible, 'm', forcer=True)
+                    self.assertEqual((self.cible / relatif).read_bytes(), pdf)
+                else:
+                    with self.assertRaises(sauvegarde.ArchiveNonConforme):
+                        sauvegarde.restaurer(archive, self.cible, 'm', forcer=True)
+                    self.assertEqual(ancien.read_text(), 'cible fictive')
+
     def test_archive_forgee_valide_restauree(self):
-        archive = self.forger((self.membre('territoria', tarfile.DIRTYPE, mode_=0o755), None),
+        archive = self.forger((self.membre('territoria', tarfile.DIRTYPE, mode_=0o755), None), self.base_archive(), self.piece_archive(),
                               (self.membre('territoria/a.txt'), b'a'))
-        self.assertEqual(sauvegarde.verifier(archive, 'm'), {'fichiers': 1, 'conforme': True})
+        self.assertEqual(sauvegarde.verifier(archive, 'm'), {'fichiers': 3, 'conforme': True})
         sauvegarde.restaurer(archive, self.cible, 'm')
         self.assertEqual((self.cible / 'territoria' / 'a.txt').read_bytes(), b'a')
 
@@ -446,7 +580,7 @@ class ArchiveForgeeTests(Base):
         self.assertEqual(list(self.cible.iterdir()), [])
 
     def test_bits_speciaux_retires(self):
-        archive = self.forger((self.membre('territoria', tarfile.DIRTYPE, mode_=0o1777), None),
+        archive = self.forger((self.membre('territoria', tarfile.DIRTYPE, mode_=0o1777), None), self.base_archive(), self.piece_archive(),
                               (self.membre('territoria/a.txt', mode_=0o6777), b'a'))
         sauvegarde.restaurer(archive, self.cible, 'm')
         self.assertEqual(mode(self.cible / 'territoria'), 0o755)

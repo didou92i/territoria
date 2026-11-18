@@ -6,6 +6,7 @@ import json
 import sys
 import unittest
 import zipfile
+from datetime import timedelta
 from dataclasses import replace
 from pathlib import Path
 from unittest.mock import patch
@@ -47,7 +48,54 @@ def docx(*paragraphes, entete=None):
     return sortie.getvalue()
 
 
-class PublicationWebTests(Base):
+class ClientPublication(Base):
+    def appel(self, methode, chemin, donnees=None, jeton=None, entetes=None):
+        """Simule une lecture fraîche avant l'action si le cas ne donne pas explicitement sa révision."""
+        if methode == 'DELETE' and chemin.startswith('/api/publications/') and '?' not in chemin:
+            statut, acte = super().appel('GET', chemin, jeton=jeton)
+            if statut == 200:
+                chemin += f"?revision={acte['revision']}"
+        if methode == 'POST' and isinstance(donnees, dict):
+            morceaux = chemin.split('/')
+            if len(morceaux) == 5 and morceaux[2] == 'publications' and 'revision' not in donnees:
+                statut, acte = super().appel('GET', '/'.join(morceaux[:-1]), jeton=jeton)
+                if statut == 200:
+                    donnees = donnees | {'revision': acte['revision']}
+            if chemin == '/api/publications/dossier' and 'revisions' not in donnees:
+                visibles = super().appel('GET', '/api/publications', jeton=jeton)[1]['publications']
+                donnees = donnees | {'revisions': {a['id']: a['revision'] for a in visibles}}
+        return super().appel(methode, chemin, donnees, jeton, entetes)
+
+
+class PublicationWebTests(ClientPublication):
+    def test_relecture_perimee_refuse_validation_ecrasement_et_ancien_client(self):
+        acte = self.deposer(self.agent, docx('Contacter test@example.invalid.'))[1]
+        base = '/api/publications/' + acte['id']
+        def appel(action, corps, utilisateur):
+            return Base.appel(self, 'POST', base + '/' + action, corps, utilisateur)
+        with ia_qui_trouve():
+            self.assertEqual(appel('reperer', {'revision': acte.get('revision', 0)}, self.agent)[0], 200)
+        lu = self.appel('GET', base, jeton=self.referent)[1]
+        revision = lu.get('revision', 0)
+        self.assertEqual(appel('passages', {'revision': revision, 'passages': []}, self.agent)[0], 200)
+        self.assertEqual(Base.appel(self, 'DELETE', base + '?revision=' + str(revision), jeton=self.agent)[0], 409)
+        for action, corps in [('valider', {}), ('valider', {'revision': revision}),
+                              ('passages', {'passages': lu['passages'], 'revision': revision}),
+                              ('passages', {'passages': lu['passages']})]:
+            with self.subTest(action=action, corps=corps):
+                self.assertEqual(appel(action, corps, self.referent)[0], 409)
+        actuel = self.appel('GET', base, jeton=self.referent)[1]
+        self.assertEqual((actuel['passages'], actuel['statut']), ([], 'a_relire'))
+        statut, valide = appel('valider', {'revision': actuel['revision']}, self.referent)
+        self.assertEqual(statut, 200)
+        for revisions in ({}, {acte['id']: revision}):
+            statut, _ = Base.appel(self, 'POST', '/api/publications/dossier', {'ids': [acte['id']], 'revisions': revisions}, self.referent)
+            self.assertEqual(statut, 409)
+        self.assertEqual(Base.appel(self, 'POST', '/api/publications/dossier', {'ids': [acte['id']]}, self.referent)[0], 409)
+        self.assertEqual(self.appel('POST', '/api/publications/dossier', {'ids': [acte['id']]}, self.referent)[0], 200)
+        self.assertEqual(appel('en-ligne', {'revision': valide['revision']}, self.referent)[0], 409)
+        self.assertEqual(appel('en-ligne', {}, self.referent)[0], 409)
+
     def setUp(self):
         super().setUp()
         self.admin = self.premier_admin()
@@ -77,6 +125,34 @@ class PublicationWebTests(Base):
         entetes = NAVIGATEUR | {'Content-Type': 'application/octet-stream'}
         return self.appel('POST', f'/api/publications/depot?{requete}', contenu, jeton, entetes)
 
+    def test_reperage_en_ligne_garde_le_texte_sur_le_serveur_territoria(self):
+        statut, acte = self.deposer(self.referent, docx('Contacter test@example.invalid.'))
+        self.assertEqual(statut, 201)
+        for distant in ('openrouter', 'mistral'):
+            with self.subTest(distant=distant), patch.object(llm_backend, 'read', return_value={'provider': distant}), \
+                    patch.object(web, '_demander_ia', side_effect=AssertionError('envoi externe')) as appel:
+                statut, reponse = self.appel('POST', f'/api/publications/{acte["id"]}/reperer', {}, self.referent)
+                self.assertEqual(statut, 200)
+                appel.assert_not_called()
+                self.assertIn('test@example.invalid', [p['texte'] for p in reponse['passages']])
+                self.assertIn('noms', reponse['avertissement'])
+
+    def test_un_nouveau_reperage_conserve_les_choix_de_relecture(self):
+        statut, acte = self.deposer(self.referent, docx('Mina Fictive et contact@example.invalid.'))
+        self.assertEqual(statut, 201)
+        route = f'/api/publications/{acte["id"]}'
+        with ia_qui_trouve('Mina Fictive'):
+            premier = self.appel('POST', route + '/reperer', {}, self.referent)[1]
+        passages = premier['passages']
+        courriel = next(p for p in passages if p['texte'] == 'contact@example.invalid')
+        courriel['coche'] = False
+        self.assertEqual(self.appel('POST', route + '/passages', {'passages': passages}, self.referent)[0], 200)
+        with patch.object(llm_backend, 'read', return_value={'provider': 'openrouter'}):
+            suivant = self.appel('POST', route + '/reperer', {}, self.referent)[1]
+        choix = {p['texte']: p['coche'] for p in suivant['passages']}
+        self.assertTrue(choix.get('Mina Fictive'))
+        self.assertFalse(choix['contact@example.invalid'])
+
     def test_parcours_complet_referent(self):
         numero = self.acte_du_registre(docx('Vu la demande de M. Jean Martin, 12 rue des Lilas.',
                                             'Article 1. Le stationnement est interdit.', 'Signé le 14 octobre 2026.'))
@@ -90,8 +166,8 @@ class PublicationWebTests(Base):
         self.assertEqual(passages['12 rue des Lilas']['categorie'], 'adresse')
         self.assertIsNone(repere['avertissement'])
         self.assertEqual(self.appel('POST', f'/api/publications/{acte["id"]}/valider', {}, self.referent)[1]['statut'], 'valide')
-        reponse = web.handle('POST', '/api/publications/dossier', NAVIGATEUR | {'Cookie': f'{comptes.COOKIE}={self.referent}'},
-                             json.dumps({'ids': [acte['id']], 'date': aujourdhui()}).encode())
+        self.appel('POST', '/api/publications/dossier', {'ids': [acte['id']], 'date': aujourdhui()}, self.referent)
+        reponse = self.derniere
         self.assertEqual(reponse.status, 200)
         self.assertEqual(dict(reponse.headers)['Content-Type'], 'application/zip')
         archive = zipfile.ZipFile(io.BytesIO(reponse.body))
@@ -163,6 +239,101 @@ class PublicationWebTests(Base):
         statut, corps = self.deposer(self.agent, b'texte', nom='acte.txt')
         self.assertEqual((statut, corps['error']), (400, 'Déposez l’acte en Word (.docx) ou en PDF.'))
 
+    def pdf_avec_plan(self, plan_separe):
+        from reportlab.pdfgen.canvas import Canvas
+        sortie = io.BytesIO()
+        document = Canvas(sortie)
+        document.drawString(40, 800, 'Article 1. Le secteur interdit figure dans le plan joint au texte de la decision.')
+        if plan_separe:
+            document.showPage()
+        document.rect(80, 90, 200, 160, fill=1)
+        document.save()
+        return sortie.getvalue()
+
+    def test_refuse_plan_sur_page_mixte_ou_annexe(self):
+        for separe in (False, True):
+            with self.subTest(separe=separe):
+                statut, corps = self.deposer(self.agent, self.pdf_avec_plan(separe), nom='acte.pdf', numero=f'PLAN-{separe}')
+                self.assertEqual(statut, 400)
+                self.assertIn('graphique', corps['error'])
+
+    def test_pdf_texte_sans_graphique_reste_publiable(self):
+        from reportlab.pdfgen.canvas import Canvas
+        sortie = io.BytesIO()
+        document = Canvas(sortie)
+        document.drawString(40, 800, 'Article 1. La commune ouvre la salle.')
+        document.showPage()
+        document.drawString(40, 800, 'Article 2. La decision prend effet le jour du depot.')
+        document.save()
+        statut, acte = self.deposer(self.referent, sortie.getvalue(), nom='acte.pdf')
+        self.assertEqual(statut, 201)
+        self.assertEqual(len(acte['paragraphes']), 2)
+        with ia_qui_trouve():
+            self.appel('POST', f'/api/publications/{acte["id"]}/reperer', {}, self.referent)
+        self.assertEqual(self.appel('POST', f'/api/publications/{acte["id"]}/valider', {}, self.referent)[0], 200)
+        self.assertEqual(self.appel('POST', '/api/publications/dossier', {'ids': [acte['id']]}, self.referent)[0], 200)
+
+    def test_refuse_image_dans_word(self):
+        from docx import Document
+        from PIL import Image
+        image = io.BytesIO()
+        Image.new('RGB', (16, 16), 'blue').save(image, 'PNG')
+        document = Document()
+        document.add_paragraph('Voir le plan du périmètre.')
+        document.add_picture(image)
+        sortie = io.BytesIO()
+        document.save(sortie)
+        statut, corps = self.deposer(self.agent, sortie.getvalue())
+        self.assertEqual(statut, 400)
+        self.assertIn('graphique', corps['error'])
+
+    def test_ancien_depot_partiel_ne_peut_plus_etre_diffuse(self):
+        ident = self.deposer(self.referent, docx('Acte synthétique.'))[1]['id']
+        with ia_qui_trouve():
+            self.appel('POST', f'/api/publications/{ident}/reperer', {}, self.referent)
+        self.assertEqual(self.appel('POST', f'/api/publications/{ident}/valider', {}, self.referent)[0], 200)
+        self.assertEqual(self.appel('POST', '/api/publications/dossier', {'ids': [ident]}, self.referent)[0], 200)
+        # Ancienne fiche validée dont la source réelle comporte une page graphique ignorée au dépôt.
+        dossier = server.DATA / 'publication' / ident
+        (dossier / 'source.docx').unlink()
+        (dossier / 'source.pdf').write_bytes(self.pdf_avec_plan(True))
+        for route, params in ((f'{ident}/valider', {}), ('dossier', {'ids': [ident]}), (f'{ident}/en-ligne', {})):
+            with self.subTest(route=route):
+                statut, corps = self.appel('POST', '/api/publications/' + route, params, self.referent)
+                self.assertEqual(statut, 400)
+                self.assertIn('graphique', corps['error'])
+
+    def test_confirmer_demain_est_refuse(self):
+        ident = self.deposer(self.referent, docx('Acte synthétique.'))[1]['id']
+        with ia_qui_trouve():
+            self.appel('POST', f'/api/publications/{ident}/reperer', {}, self.referent)
+        self.appel('POST', f'/api/publications/{ident}/valider', {}, self.referent)
+        demain = (jour_courant() + timedelta(days=1)).isoformat()
+        self.assertEqual(self.appel('POST', '/api/publications/dossier', {'ids': [ident], 'date': demain}, self.referent)[0], 200)
+        self.assertEqual(self.appel('POST', f'/api/publications/{ident}/en-ligne', {}, self.referent)[0], 400)
+        self.assertEqual(self.appel('GET', f'/api/publications/{ident}', jeton=self.referent)[1]['statut'], 'valide')
+
+    def test_retrait_du_dernier_acte_et_remplacement(self):
+        numero = 'D2026-240'
+        ancien, _ = self.publier(self.referent, numero)
+        retrait = self.appel('POST', f'/api/publications/{ancien}/retrait', {'motif': 'Copie à rectifier'}, self.referent)[1]
+        self.assertEqual(self.appel('POST', '/api/publications/dossier', {'ids': []}, self.agent)[0], 403)
+        statut, contenu = self.appel('POST', '/api/publications/dossier', {'ids': []}, self.referent)
+        self.assertEqual(statut, 200)
+        with zipfile.ZipFile(io.BytesIO(contenu)) as index:
+            self.assertFalse(any(n.endswith('.pdf') for n in index.namelist()))
+            self.assertNotIn(numero, index.read('index.html').decode())
+            self.assertEqual(len(index.read('deliberations.csv').splitlines()), 1)
+        for champs in ({'type': 'arrete'}, {'date_acte': '2026-10-15'}, {'numero': 'D2026/240'}):
+            self.assertEqual(self.deposer(self.agent, docx('Autre acte'), **({'numero': numero} | champs))[0], 400)
+        nouveau = self.deposer(self.agent, docx('Copie corrigée.'), numero=numero)
+        self.assertEqual(nouveau[0], 201)
+        self.assertEqual(nouveau[1]['remplace_id'], ancien)
+        self.assertNotEqual(nouveau[1]['id'], ancien)
+        self.assertEqual(self.deposer(self.agent, docx('Doublon actif'), numero=numero)[0], 400)
+        ancien_lu = self.appel('GET', f'/api/publications/{ancien}', jeton=self.referent)[1]
+        self.assertEqual((ancien_lu['statut'], ancien_lu['empreinte_pdf']), ('retire', retrait['empreinte_pdf']))
+
     def test_depot_pdf_image_refuse(self):
         from reportlab.pdfgen import canvas
         sortie = io.BytesIO()
@@ -171,7 +342,8 @@ class PublicationWebTests(Base):
         page.save()
         with patch.object(server, '_ocr_ou_rien', return_value=None):  # pas de lecture optique sur ce poste
             statut, corps = self.deposer(self.agent, sortie.getvalue(), nom='acte.pdf')
-        self.assertEqual((statut, corps['error']), (400, 'Ce PDF est une image : déposez la version Word, ou un PDF texte.'))
+        self.assertEqual(statut, 400)
+        self.assertIn('graphique', corps['error'])
 
     def test_agent_ne_voit_que_les_siennes(self):
         self.deposer(self.agent, docx('Texte de l’agent'))
@@ -196,8 +368,8 @@ class PublicationWebTests(Base):
         with ia_qui_trouve():
             self.appel('POST', f'/api/publications/{acte["id"]}/reperer', {}, jeton)
         self.appel('POST', f'/api/publications/{acte["id"]}/valider', {}, jeton)
-        reponse = web.handle('POST', '/api/publications/dossier', NAVIGATEUR | {'Cookie': f'{comptes.COOKIE}={jeton}'},
-                             json.dumps({'ids': [acte['id']], 'date': aujourdhui()}).encode())
+        self.appel('POST', '/api/publications/dossier', {'ids': [acte['id']], 'date': aujourdhui()}, jeton)
+        reponse = self.derniere
         self.assertEqual(reponse.status, 200)
         self.assertEqual(self.appel('POST', f'/api/publications/{acte["id"]}/en-ligne', {}, jeton)[0], 200)
         return acte['id'], zipfile.ZipFile(io.BytesIO(reponse.body))
@@ -216,8 +388,8 @@ class PublicationWebTests(Base):
         with ia_qui_trouve():
             self.appel('POST', f'/api/publications/{nouveau["id"]}/reperer', {}, self.referent)
         self.appel('POST', f'/api/publications/{nouveau["id"]}/valider', {}, self.referent)
-        reponse = web.handle('POST', '/api/publications/dossier', NAVIGATEUR | {'Cookie': f'{comptes.COOKIE}={self.referent}'},
-                             json.dumps({'ids': [nouveau['id']], 'date': aujourdhui()}).encode())
+        self.appel('POST', '/api/publications/dossier', {'ids': [nouveau['id']], 'date': aujourdhui()}, self.referent)
+        reponse = self.derniere
         index = zipfile.ZipFile(io.BytesIO(reponse.body)).read('index.html').decode()
         self.assertIn('D2026-021', index)
         self.assertIn('D2026-023', index)
@@ -242,7 +414,7 @@ class PublicationWebTests(Base):
         self.assertEqual(self.appel('GET', f'/api/publications/{acte["id"]}', jeton=self.agent)[0], 404)
 
 
-class VisiteurPublicationTests(Base):
+class VisiteurPublicationTests(ClientPublication):
     """Démonstration : un visiteur va au bout du parcours avec ses propres actes fictifs, jamais ceux des autres."""
     def setUp(self):
         super().setUp()

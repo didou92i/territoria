@@ -48,10 +48,20 @@ gpu() {
     printf '%s' "${nom:-inconnu}"
 }
 
-# Espace libre là où territoria-donnees sera rangé (son premier dossier parent existant).
+# Une future installation peut ne pas encore avoir créé son dossier.
+dossier_existant() {
+    local dossier="$TERRITORIA_DONNEES_HOTE"
+    case "$dossier" in /*) ;; *) return 1 ;; esac
+    while [ ! -d "$dossier" ]; do
+        if [ -L "$dossier" ] || [ -e "$dossier" ] || [ "$dossier" = / ]; then return 1; fi
+        dossier="$(dirname "$dossier")"
+    done
+    (CDPATH='' cd -P -- "$dossier" && pwd -P) 2>/dev/null
+}
+
 disque_libre_go() {
-    local dossier="$TERRITORIA_DONNEES_HOTE" ko
-    while [ ! -d "$dossier" ] && [ "$dossier" != / ]; do dossier="$(dirname "$dossier")"; done
+    local dossier ko
+    if ! dossier="$(dossier_existant)"; then printf 'inconnu'; return; fi
     ko="$(df -Pk "$dossier" 2>/dev/null | awk 'NR == 2 { print $4 }' || true)"
     case "$ko" in
         '' | *[!0-9]*) printf 'inconnu' ;;
@@ -90,26 +100,31 @@ etat_lms() {
     if [ -n "$(chemin_lms)" ]; then printf 'present'; else printf 'absent'; fi
 }
 
-# FileVault (macOS) ou un volume chiffré LUKS, vu par lsblk (Linux).
+# Chiffrement du volume des données. Un autre volume protégé ne prouve rien pour celui-ci.
 chiffrement_disque() {
-    local etat=""
+    local dossier peripherique etat montage chaine
+    if ! dossier="$(dossier_existant)"; then printf 'inconnu'; return; fi
     case "$(systeme)" in
         macos)
-            etat="$(fdesetup status 2>/dev/null || true)"
+            peripherique="$(df -P "$dossier" 2>/dev/null | awk 'NR == 2 { print $1 }' || true)"
+            case "$peripherique" in /dev/disk*) ;; *) printf 'inconnu'; return ;; esac
+            etat="$(diskutil info -plist "$peripherique" 2>/dev/null | plutil -extract FileVault raw -expect bool -o - - 2>/dev/null)" || etat=""
             case "$etat" in
-                "FileVault is On"*) printf 'actif' ;;
-                "FileVault is Off"*) printf 'inactif' ;;
+                true) printf 'actif' ;;
+                false) printf 'inactif' ;;
                 *) printf 'inconnu' ;;
             esac
             ;;
         linux)
-            if ! command -v lsblk >/dev/null 2>&1 || ! etat="$(lsblk -o TYPE 2>/dev/null)"; then
-                printf 'inconnu'
-            elif printf '%s\n' "$etat" | grep -w crypt >/dev/null; then
-                printf 'actif'
-            else
-                printf 'inactif'
-            fi
+            montage="$(findmnt -nr -o FSTYPE,MAJ:MIN -T "$dossier" 2>/dev/null)" || montage=""
+            # Un réseau, un overlay ou un système multi-périphériques (p. ex. Btrfs) exige une autre preuve.
+            if [[ ! "$montage" =~ ^(ext[234]|xfs)[[:space:]]+([0-9]+:[0-9]+)$ ]]; then printf 'inconnu'; return; fi
+            peripherique="/dev/block/${BASH_REMATCH[2]}"
+            chaine="$(lsblk -snr -o TYPE -- "$peripherique" 2>/dev/null | paste -sd ' ' -)" || chaine=""
+            # Chaînes simples, du volume au disque. Plusieurs parents ou une couche inconnue sont indéterminés.
+            if [[ "$chaine" =~ ^(lvm\ )?crypt\ (lvm\ )?(part\ )?disk$ ]]; then printf 'actif'
+            elif [[ "$chaine" =~ ^(lvm\ )?(part\ )?disk$ ]]; then printf 'inactif'
+            else printf 'inconnu'; fi
             ;;
         *) printf 'inconnu' ;;
     esac

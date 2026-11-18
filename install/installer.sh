@@ -49,7 +49,7 @@ gestionnaire_paquets() {
 # Vrai si apt propose une version installable du paquet (« Candidate: » autre que « (none) »).
 paquet_apt_disponible() {
     local candidat
-    candidat="$(apt-cache policy "$1" 2>/dev/null | sed -n 's/^ *Candidate: *//p' | head -n 1 || true)"
+    candidat="$(LC_ALL=C apt-cache policy "$1" 2>/dev/null | sed -n 's/^ *Candidate: *//p' | head -n 1 || true)"
     [ -n "$candidat" ] && [ "$candidat" != "(none)" ]
 }
 

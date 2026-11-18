@@ -69,6 +69,30 @@ def relever(texte: str, precedentes: dict | None = None) -> dict:
     return mentions
 
 
+def incoherence(mentions: dict) -> str:
+    """Seuls des nombres fournis déclenchent une relance. Les blancs et nuls peuvent expliquer un total inférieur."""
+    exercice = mentions.get('exercice')
+    votants = mentions.get('votants')
+    if votants == 0 and mentions.get('unanimite'):
+        return 'Le vote est indiqué à l’unanimité avec zéro votant. Précisez le nombre de votants ou le résultat du vote.'
+    if exercice is not None:
+        for cle, libelle in (('presents', 'présents'), ('votants', 'votants')):
+            if mentions.get(cle, 0) > exercice:
+                return f"Vous indiquez {mentions[cle]} {libelle} pour {exercice} membres en exercice. Quel effectif faut-il corriger ?"
+    decompte = sum(mentions.get(voix, 0) for voix in _VOIX)
+    if votants is not None and decompte > votants:
+        return f'Le décompte des voix et abstentions atteint {decompte} pour {votants} votants. Précisez le décompte ou le nombre de votants.'
+    if exercice is not None and decompte > exercice:
+        return f'Le décompte atteint {decompte} pour {exercice} membres en exercice. Quels chiffres faut-il corriger ?'
+    if 'presents' in mentions and 'pouvoirs' in mentions:
+        representes = mentions['presents'] + mentions['pouvoirs']
+        if exercice is not None and representes > exercice:
+            return f"Les présents et les pouvoirs totalisent {representes} pour {exercice} membres en exercice. Quels effectifs faut-il corriger ?"
+        if max(decompte, votants or 0) > representes:
+            return f"Les {mentions['presents']} présents et {mentions['pouvoirs']} pouvoirs représentent au plus {representes} votants. Précisez les effectifs et le vote."
+    return ''
+
+
 def mention_vote(mentions: dict, manquant: str) -> str:
     if mentions.get('unanimite'):
         resultat = 'à l’unanimité'

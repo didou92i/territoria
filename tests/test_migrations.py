@@ -32,7 +32,7 @@ TABLES_ATTENDUES = {'spaces', 'documents', 'chunks', 'assistants', 'conversation
                     'parametres', 'activite', 'services', 'utilisateurs', 'sessions', 'partages', 'signalements', 'chunk_vecteurs', 'registre_actes',
                     'seances', 'seance_intervenants', 'seance_segments', 'seance_points', 'essais_ia', 'publications'}
 TOUTES = ['socle', 'administration', 'comptes', 'retours', 'champs_assistants', 'vecteurs', 'ocr', 'registre', 'seances',
-          'redaction', 'rapports_empreintes', 'essais_ia', 'publications', 'publications_relecture', 'publications_retrait']
+          'redaction', 'rapports_empreintes', 'essais_ia', 'publications', 'publications_relecture', 'publications_retrait', 'publications_rectificatives', 'publications_revision']
 ANCIENNE_DESCRIPTION = {'public': 'Textes et ressources publics importés sur ce Mac.',
                         'interne': 'Vos documents, rangés et interrogés localement.'}
 
@@ -85,13 +85,25 @@ class Base(unittest.TestCase):
 
 
 class MigrationTests(Base):
+    def test_0016_conserve_les_publications_anterieures(self):
+        anciennes = [m for m in migrer._migrations() if m.VERSION <= 15]
+        with patch.object(migrer, '_migrations', return_value=anciennes):
+            migrer.appliquer(self.base)
+        with sqlite3.connect(self.base) as c:
+            c.execute("INSERT INTO publications(id,type,numero,date_acte,objet,source,cree_par,cree_le,statut,empreinte_pdf,retire_motif) "
+                      "VALUES ('ancienne','arrete','A-1','2025-01-01','Acte ancien','depot','agent','2025-01-01','retire','empreinte','Motif')")
+        self.assertEqual(migrer.appliquer(self.base), ['publications_rectificatives', 'publications_revision'])
+        with lire(self.base) as c:
+            self.assertEqual(c.execute('SELECT id,remplace_id,empreinte_pdf,retire_motif,revision FROM publications').fetchone(),
+                             ('ancienne', '', 'empreinte', 'Motif', 0))
+
     def test_base_neuve(self):
         self.assertEqual(migrer.appliquer(self.base), TOUTES)
         with lire(self.base) as c:
             tables = {nom for (nom,) in c.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")}
             self.assertEqual(tables, TABLES_ATTENDUES)
-            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 15)
-            self.assertEqual(c.execute('SELECT version, nom FROM schema_migrations').fetchall(), [(1, 'socle'), (2, 'administration'), (3, 'comptes'), (4, 'retours'), (5, 'champs_assistants'), (6, 'vecteurs'), (7, 'ocr'), (8, 'registre'), (9, 'seances'), (10, 'redaction'), (11, 'rapports_empreintes'), (12, 'essais_ia'), (13, 'publications'), (14, 'publications_relecture'), (15, 'publications_retrait')])
+            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 17)
+            self.assertEqual(c.execute('SELECT version, nom FROM schema_migrations').fetchall(), [(1, 'socle'), (2, 'administration'), (3, 'comptes'), (4, 'retours'), (5, 'champs_assistants'), (6, 'vecteurs'), (7, 'ocr'), (8, 'registre'), (9, 'seances'), (10, 'redaction'), (11, 'rapports_empreintes'), (12, 'essais_ia'), (13, 'publications'), (14, 'publications_relecture'), (15, 'publications_retrait'), (16, 'publications_rectificatives'), (17, 'publications_revision')])
             self.assertTrue(c.execute('SELECT applique_le FROM schema_migrations').fetchone()[0])
             conversations = {ligne[1] for ligne in c.execute('PRAGMA table_info(conversations)')}
             messages = {ligne[1] for ligne in c.execute('PRAGMA table_info(messages)')}
@@ -109,7 +121,7 @@ class MigrationTests(Base):
             self.assertEqual(dict(c.execute('SELECT id, description FROM spaces')),
                              {'public': 'Textes et ressources publics importés dans votre espace.',
                               'interne': 'Vos documents, rangés dans votre espace privé.'})
-            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 15)
+            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 17)
 
     def test_relance_sans_effet(self):
         migrer.appliquer(self.base)
@@ -118,7 +130,7 @@ class MigrationTests(Base):
         self.assertEqual(empreinte(self.base), avant)
 
     def test_version_maximale(self):
-        self.assertEqual(migrer.version_maximale(), 15)
+        self.assertEqual(migrer.version_maximale(), 17)
 
     def test_colonnes_de_redaction(self):
         migrer.appliquer(self.base)
@@ -257,7 +269,7 @@ class ServeurTests(Base):
         initialiser(self.racine)
         with lire(self.base) as c:
             self.assertEqual(c.execute('PRAGMA journal_mode').fetchone()[0], 'wal')
-            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 15)
+            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 17)
             self.assertEqual(c.execute('SELECT COUNT(*) FROM assistants').fetchone()[0], len(server.TEMPLATES))
 
     def test_reprise_du_pilote_puis_migration(self):
@@ -274,8 +286,8 @@ class ServeurTests(Base):
         with lire(cible / 'territoire.sqlite3') as c:
             comptes = [c.execute(f'SELECT COUNT(*) FROM {table}').fetchone()[0] for table in ('spaces', 'conversations', 'messages')]
             self.assertEqual(comptes, [2, 1, 2])
-            self.assertEqual(c.execute('SELECT version, nom FROM schema_migrations').fetchall(), [(1, 'socle'), (2, 'administration'), (3, 'comptes'), (4, 'retours'), (5, 'champs_assistants'), (6, 'vecteurs'), (7, 'ocr'), (8, 'registre'), (9, 'seances'), (10, 'redaction'), (11, 'rapports_empreintes'), (12, 'essais_ia'), (13, 'publications'), (14, 'publications_relecture'), (15, 'publications_retrait')])
-            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 15)
+            self.assertEqual(c.execute('SELECT version, nom FROM schema_migrations').fetchall(), [(1, 'socle'), (2, 'administration'), (3, 'comptes'), (4, 'retours'), (5, 'champs_assistants'), (6, 'vecteurs'), (7, 'ocr'), (8, 'registre'), (9, 'seances'), (10, 'redaction'), (11, 'rapports_empreintes'), (12, 'essais_ia'), (13, 'publications'), (14, 'publications_relecture'), (15, 'publications_retrait'), (16, 'publications_rectificatives'), (17, 'publications_revision')])
+            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 17)
             self.assertEqual(c.execute('SELECT DISTINCT artifact FROM messages').fetchall(), [('{}',)])
             self.assertEqual(c.execute('PRAGMA journal_mode').fetchone()[0], 'wal')
 
@@ -295,7 +307,7 @@ class OutilsMigrerTests(Base):
         creer_base_forme_pilote(self.base)
         self.assertEqual(self.executer('--base', str(self.base)), (0, 'ETAPE migrer : OK\n'))
         with lire(self.base) as c:
-            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 15)
+            self.assertEqual(c.execute('PRAGMA user_version').fetchone()[0], 17)
 
     def test_essai_ne_modifie_pas_la_base(self):
         creer_base_forme_pilote(self.base)

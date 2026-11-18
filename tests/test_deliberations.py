@@ -201,6 +201,125 @@ class AssemblageTests(unittest.TestCase):
 
 
 class ConversationTests(Base):
+
+    def test_question_puis_correction_du_meme_projet(self):
+        premiere = DEMANDE + ' 25 votants. Vote : 23 pour, 0 contre, 2 abstentions.'
+        with patch.object(llm_backend, 'chat', return_value=completion()) as rediger, \
+                patch.object(server, 'call_n8n', return_value='Le projet indique deux abstentions.') as expliquer:
+            charge = {'assistant': 'deliberation', 'mode': 'libre'}
+            statut, projet = self.appel('POST', '/api/chat', {**charge, 'question': premiere})
+            self.assertEqual(statut, 200)
+            charge['conversation'] = projet['conversation']
+            for demande in ('Pourquoi y a-t-il deux abstentions ?', 'Explique le résultat du vote.', 'Fais une synthèse de ce projet.', 'Résume le dispositif.'):
+                statut, r = self.appel('POST', '/api/chat', {**charge, 'question': demande})
+                self.assertEqual((statut, r['answer']), (200, 'Le projet indique deux abstentions.'))
+                self.assertNotIn('download', r['artifact'])
+                self.assertIn(projet['artifact']['document']['vote'], expliquer.call_args.args[0][-1]['content'])
+            self.assertEqual(rediger.call_count, 1)
+            statut, r = self.appel('POST', '/api/chat', {**charge, 'question': 'Peux-tu corriger le vote : 24 pour, 0 contre, 1 abstention ?'})
+            self.assertEqual(statut, 200)
+            self.assertIn('24 voix pour', r['artifact']['document']['vote'])
+
+    def test_scrutin_impossible_relance_avant_export_et_se_corrige(self):
+        with patch.object(llm_backend, 'chat', return_value=completion()) as modele:
+            statut, r = self.appel('POST', '/api/chat', {'question': DEMANDE + ' 25 votants. Vote : 48 pour, 0 contre, 2 abstentions.'})
+            self.assertEqual(statut, 200)
+            self.assertNotIn('download', r['artifact'])
+            self.assertIn('25', r['answer'])
+            self.assertIn('50', r['answer'])
+            modele.assert_not_called()
+            statut, r = self.appel('POST', '/api/chat', {'question': '23 pour.', 'conversation': r['conversation']})
+            self.assertEqual(statut, 200)
+            self.assertIn('23 voix pour', r['artifact']['document']['vote'])
+
+    def test_votes_partiels_et_bornes_connues(self):
+        for mentions, anomalie in (
+            ('6 membres en exercice. Vote : 8 pour.', True),
+            ('15 membres en exercice, 12 présents, 10 pouvoirs, 12 votants.', True),
+            ('0 votants, vote à l’unanimité.', True),
+            ('15 membres en exercice, 12 présents, 3 pouvoirs, 12 votants.', False),
+            ('22 présents, 3 pouvoirs et 28 votants.', True),
+            ('25 votants. Vote : 20 pour, 1 contre.', False),
+            ('8 présents. Vote : 9 pour.', False),  # pouvoirs inconnus
+        ):
+            with self.subTest(mentions=mentions):
+                _, precision = d.preparer(DEMANDE + ' ' + mentions, None, '')
+                self.assertEqual(bool(precision), anomalie)
+
+    def test_montant_de_revision_obligatoire_dans_le_dispositif(self):
+        from docx import Document
+        from io import BytesIO
+        with patch.object(llm_backend, 'chat', return_value=completion()):
+            _, initial = self.appel('POST', '/api/chat', {'question': DEMANDE})
+            for question in ('Portez le montant de la subvention à 2 000,50 euros.',
+                             'Remplacez 1 500 € par 2 000,50 € dans le dispositif.'):
+                with self.subTest(question=question):
+                    statut, r = self.appel('POST', '/api/chat', {'assistant':'deliberation','question':question, 'conversation':initial['conversation']})
+                    self.assertEqual(statut, 400)
+                    self.assertIn('montant', r['error'])
+            statut, raw = self.appel('GET', initial['artifact']['download'])
+            self.assertEqual(statut, 200)
+            self.assertIn('1 500 €', ' '.join(p.text for p in Document(BytesIO(raw)).paragraphs))
+        for mauvaise in (('Accorde 2 000,55 €.',), ('Accorde 2 000,50 €.','Accorde aussi 1 500 €.')):
+            with self.subTest(mauvaise=mauvaise), patch.object(llm_backend, 'chat', return_value=completion(decisions=mauvaise)):
+                statut, _ = self.appel('POST', '/api/chat', {'assistant':'deliberation','question':question, 'conversation':initial['conversation']})
+                self.assertEqual(statut, 400)
+
+    def test_revision_preserve_chaque_beneficiaire_et_les_autres_decisions_dans_le_word(self):
+        from docx import Document
+        from io import BytesIO
+        for montant_b in ('3 000 €', '1 000 €'):
+            with self.subTest(montant_b=montant_b):
+                a = 'Le conseil attribue 1 000 € au club A.'
+                b = f'Le conseil attribue {montant_b} au club B.'
+                c = 'Le versement intervient après remise du bilan.'
+                demande = f'Rédige une délibération de subvention. {a} {b} {c}'
+                with patch.object(llm_backend, 'chat', return_value=completion(decisions=(a, b, c))):
+                    statut, initial = self.appel('POST', '/api/chat', {'question':demande})
+                    self.assertEqual(statut, 200)
+                charge = {'assistant':'deliberation', 'conversation':initial['conversation'],
+                          'question':'Remplacez 1 000 € par 2 000 € pour le club A.'}
+                attendu = a.replace('1 000', '2 000')
+                for dispositif in ((attendu,), (attendu, b), (attendu.replace('club A', 'club B'), b.replace('club B', 'club A'), c)):
+                    with patch.object(llm_backend, 'chat', return_value=completion(decisions=dispositif)):
+                        statut, erreur = self.appel('POST', '/api/chat', charge)
+                        self.assertEqual(statut, 400)
+                        self.assertIn('montant', erreur['error'])
+                if montant_b == '1 000 €':
+                    with patch.object(llm_backend, 'chat') as modele:
+                        statut, precision = self.appel('POST', '/api/chat', {**charge,'question':'Remplacez 1 000 € par 2 000 €.'})
+                        self.assertEqual(statut, 200)
+                        self.assertNotIn('download', precision['artifact'])
+                        modele.assert_not_called()
+                    charge['question'] = 'Article 1.'
+                with patch.object(llm_backend, 'chat', return_value=completion(decisions=(attendu, b, c))):
+                    statut, revise = self.appel('POST', '/api/chat', charge)
+                    self.assertEqual(statut, 200)
+                _, word = self.appel('GET', revise['artifact']['download'])
+                paragraphes = [p.text for p in Document(BytesIO(word)).paragraphs]
+                for decision in (attendu, b, c):
+                    self.assertIn(decision, paragraphes)
+                _, ancien = self.appel('GET', initial['artifact']['download'])
+                self.assertIn(a, [p.text for p in Document(BytesIO(ancien)).paragraphs])
+
+    def test_precision_recente_transmise_apres_un_long_premier_tour(self):
+        debut = DEMANDE + ' Motif circonstancié.' * 340
+        donnees, _ = d.preparer(debut, None, '')
+        donnees, _ = d.preparer('Remplace le montant par 2 000 euros.', {'kind':'deliberation','inputs':donnees}, '')
+        self.assertIn('2 000 euros', donnees['contexte'])
+        self.assertIn('subvention', donnees['contexte'])
+
+    def test_reference_absente_ou_partielle_interrompt_avant_redaction(self):
+        sources = d.textes()
+        for manquantes in (set(sources), {'L2121-17'}):
+            disponibles = {k: v for k, v in sources.items() if k not in manquantes}
+            with self.subTest(manquantes=len(manquantes)), patch.object(d, 'textes', return_value=disponibles), \
+                    patch.object(llm_backend, 'chat', return_value=completion()) as modele:
+                statut, reponse = self.appel('POST', '/api/chat', {'question': DEMANDE, 'mode': 'libre'})
+                self.assertEqual(statut, 400)
+                self.assertIn('références', reponse['error'])
+                modele.assert_not_called()
+
     def test_vote_et_effectifs_de_la_demande_jusqu_au_word(self):
         from docx import Document
         from io import BytesIO
@@ -211,7 +330,9 @@ class ConversationTests(Base):
                  ('Modifiez le montant de la subvention à 2 000 euros.', 29, 23, 0),
                  ('Corrigez les données de séance : 30 membres en exercice. Vote : 22 pour, 1 contre, 2 abstentions.', 30, 22, 1))
         payload = {'assistant': 'deliberation', 'mode': 'libre'}
-        with patch.object(llm_backend, 'chat', return_value=completion()):
+        corrigee = completion(decisions=('Le conseil municipal décide d’attribuer une subvention exceptionnelle de 2 000 € au comité des fêtes.',
+                                         'Les crédits sont inscrits au budget de l’exercice, chapitre [à compléter].'))
+        with patch.object(llm_backend, 'chat', side_effect=[completion(), corrigee, corrigee]):
             for question, effectif, pour, contre in tours:
                 statut, reponse = self.appel('POST', '/api/chat', {**payload, 'question': question})
                 self.assertEqual(statut, 200)
@@ -223,6 +344,8 @@ class ConversationTests(Base):
                 self.assertEqual(statut, 200)
                 paragraphes = [p.text for p in Document(BytesIO(word)).paragraphs]
                 with self.subTest(question=question):
+                    montant = '1 500 €' if question == demande else '2 000 €'
+                    self.assertIn(montant, ' '.join(paragraphes))
                     entete = '\n'.join(acte['preambule'])
                     for libelle, valeur in (('membres en exercice', effectif), ('présents', 22), ('pouvoirs', 3), ('votants', 25)):
                         self.assertRegex(entete.lower(), rf'\b{libelle}\s*:\s*{valeur}\b|\b{valeur}\s+{libelle}\b')
