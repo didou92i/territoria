@@ -63,12 +63,12 @@ Dans cette fenêtre, on colle une ligne (clic droit sous Windows, Cmd + V sur Ma
 
 ### Télécharger TerritorIA
 
-Les deux lignes suivantes créent le dossier `territoria` dans votre dossier personnel (pas dans « Documents », souvent
-synchronisé avec OneDrive ou iCloud), puis s'y placent :
+Ces commandes téléchargent la version pilote 0.2.2 pour un poste individuel dans le dossier `territoria` de votre
+dossier personnel. Gardez-le en dehors de « Documents », souvent synchronisé avec OneDrive ou iCloud.
 
 ```powershell
 cd $HOME
-git clone https://github.com/didou92i/territoria.git territoria
+git clone --branch v0.2.2 https://github.com/didou92i/territoria.git territoria
 cd territoria
 ```
 
@@ -76,7 +76,7 @@ C'est la même chose sur Mac :
 
 ```sh
 cd ~
-git clone https://github.com/didou92i/territoria.git territoria
+git clone --branch v0.2.2 https://github.com/didou92i/territoria.git territoria
 cd territoria
 ```
 

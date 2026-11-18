@@ -34,6 +34,23 @@ l'EUPL énumère en annexe. Cela vaut aussi quand elle est proposée en ligne.
 
 Ces composants gardent leur propre licence : ils ne portent pas les lignes SPDX ci-dessus.
 
+### Provenance de la roue juridique
+
+Les 47 fichiers de code et de données de la roue TerritorIA, ses quatre fichiers de licence et de mentions
+et le README inclus dans ses métadonnées correspondent octet pour octet aux fichiers du
+[commit amont `3164e52`](https://github.com/didou92i/juriste-territorial/commit/3164e528b51ce85622000509c241ba000dc2205a).
+
+| Archive | Empreinte SHA-256 |
+|---|---|
+| Roue embarquée dans `vendor/` | `ae5ab33c4c564e6affce80a67c4395012fd03bb64e6c00442663fd870a3293c0` |
+| Roue de la [release amont `v0.4.0`](https://github.com/didou92i/juriste-territorial/releases/tag/v0.4.0) | `e973157496f16f7ff326b1d4e33b492a9cd30c559be47dd50cdc5c550acbafa1` |
+
+Depuis la racine du dépôt, vérifiez l'archive embarquée avec
+`python -m zipfile -t vendor/droit_territorial-0.4.0-py3-none-any.whl`.
+Pour comparer son empreinte à la première ligne du tableau, utilisez
+`shasum -a 256 vendor/droit_territorial-0.4.0-py3-none-any.whl` ou
+`Get-FileHash vendor/droit_territorial-0.4.0-py3-none-any.whl -Algorithm SHA256` sous PowerShell.
+
 ## Installés, mais non distribués avec TerritorIA
 
 Les scripts d'installation téléchargent ces logiciels et modèles depuis leurs sources officielles, chacun sous ses
