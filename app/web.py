@@ -763,10 +763,9 @@ def _get(p, q, compte):
                         'text/plain; charset=utf-8', 'attachment; filename="transcription.txt"')
     if p == '/api/session':
         session = {'mode': 'equipe' if REGLAGES.demonstration or comptes.mode_equipe(server.DB) else 'solo',
-                   'utilisateur': _session_publique(compte), 'roles': comptes.ROLES}
+                   'utilisateur': _session_publique(compte), 'roles': comptes.ROLES, 'version': VERSION}
         if REGLAGES.demonstration:  # écran de connexion, ou « Démonstration en préparation » tant qu'aucun compte n'existe
-            session |= {'demonstration': True, 'pret': comptes.mode_equipe(server.DB), 'fournisseur': _fournisseur_en_ligne(),
-                        'version': VERSION}
+            session |= {'demonstration': True, 'pret': comptes.mode_equipe(server.DB), 'fournisseur': _fournisseur_en_ligne()}
         if REGLAGES.orchestration == 'interne' or _visiteur(compte):  # pas de transcription, ou réservée aux comptes : page masquée
             session['seances'] = False
         return _json(200, session)

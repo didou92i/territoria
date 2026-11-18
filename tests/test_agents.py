@@ -441,7 +441,8 @@ class ContenuImposeTests(unittest.TestCase):
         version = re.search(r"^VERSION = '([^']+)'", source, re.M).group(1)
         for nom, texte in (('AGENTS.md', self.agents), ('README.md', self.readme)):
             with self.subTest(document=nom):
-                self.assertEqual(set(re.findall(r'\bv\d+\.\d+\.\d+\b', texte)), {'v' + version})
+                exemples = section(texte, 'Mise à jour')
+                self.assertEqual(set(re.findall(r'\bv\d+\.\d+\.\d+\b', exemples)), {'v' + version})
 
     def test_le_guide_nomme_les_prerequis_que_l_installation_exige(self):
         guide = (RACINE / 'docs' / 'guide-debutant.md').read_text(encoding='utf-8')

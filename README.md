@@ -132,7 +132,7 @@ navigateur → TerritorIA (conteneur) → n8n (conteneur) → TerritorIA (API in
 
 ## État du projet
 
-Novembre 2026 : version pilote 0.2.0, sur un poste.
+Novembre 2026 : version pilote 0.2.1, sur un poste.
 
 - **Fonctionne** : tout ce que décrit le tableau « Ce que fait TerritorIA » ci-dessus.
 - **Pas encore** : enregistrement en direct, courriers au papier à en-tête, mode équipe.
@@ -494,7 +494,7 @@ $version = Read-Host 'Référence Git validée'
 powershell -NoProfile -ExecutionPolicy Bypass -File install\mettre-a-jour.ps1 --version $version
 ```
 
-- **La version** : une étiquette, ou `origin/<branche>` (par exemple `origin/main`). Un nom de branche seul, `main`,
+- **La version** : une étiquette (par exemple `v0.2.1` pour le pilote individuel), ou `origin/<branche>` (par exemple `origin/main`). Un nom de branche seul, `main`,
   désigne la branche **locale**, que la récupération des nouveautés ne fait pas avancer. `--destination <dossier>` place la
   sauvegarde d'avant la mise à jour ailleurs que dans `territoria-donnees/mises-a-jour/`.
 - **Avant** : le dépôt doit être propre (`git status --porcelain` ne montre rien ; un fichier ajouté ou modifié dans le

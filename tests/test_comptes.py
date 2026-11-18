@@ -91,6 +91,7 @@ class PremierCompteTests(Base):
     def test_mode_un_poste_sans_connexion(self):
         statut, session = self.appel('GET', '/api/session')
         self.assertEqual((statut, session['mode'], session['utilisateur']['implicite']), (200, 'solo', True))
+        self.assertEqual(session['version'], VERSION)
         self.assertEqual(self.appel('GET', '/api/spaces')[0], 200)
 
     def test_premier_administrateur_recoit_les_contenus_et_une_session_sure(self):
@@ -118,7 +119,7 @@ class PremierCompteTests(Base):
         self.assertEqual(self.appel('GET', '/api/spaces'), (401, web.CONNEXION_REQUISE))
         self.assertEqual(self.appel('POST', '/api/chat', {'question': 'Bonjour', 'mode': 'libre'})[0], 401)
         self.assertEqual(web.handle('GET', '/', NAVIGATEUR, b'').status, 200)
-        self.assertEqual(self.appel('GET', '/api/session')[1], {'mode': 'equipe', 'utilisateur': None, 'roles': comptes.ROLES})
+        self.assertEqual(self.appel('GET', '/api/session')[1], {'mode': 'equipe', 'utilisateur': None, 'roles': comptes.ROLES, 'version': VERSION})
 
     def test_un_seul_premier_compte_et_mot_de_passe_assez_long(self):
         self.assertEqual(self.appel('POST', '/api/comptes/premier', {'identifiant': 'admin', 'nom': 'A', 'mot_de_passe': 'court'})[0], 400)
@@ -254,7 +255,7 @@ class DemonstrationAccesTests(Base):
     def test_hors_demonstration_inchange(self):
         self.demonstration(ORIGINE)
         with patch.object(web, 'REGLAGES', replace(web.REGLAGES, demonstration=False)):
-            self.assertEqual(set(self.appel('GET', '/api/session')[1]), {'mode', 'utilisateur', 'roles'})
+            self.assertEqual(set(self.appel('GET', '/api/session')[1]), {'mode', 'utilisateur', 'roles', 'version'})
             self.assertEqual(self.appel('GET', '/api/spaces')[0], 200)
 
 
