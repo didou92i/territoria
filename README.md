@@ -132,7 +132,7 @@ navigateur → TerritorIA (conteneur) → n8n (conteneur) → TerritorIA (API in
 
 ## État du projet
 
-Novembre 2026 : version pilote 0.2.1, sur un poste.
+Novembre 2026 : version pilote 0.2.2, sur un poste.
 
 - **Fonctionne** : tout ce que décrit le tableau « Ce que fait TerritorIA » ci-dessus.
 - **Pas encore** : enregistrement en direct, courriers au papier à en-tête, mode équipe.
@@ -178,7 +178,7 @@ en ligne.
 - **Récupérer le dépôt**, puis se placer dedans (toutes les commandes se lancent depuis sa racine) :
 
   ```sh
-  git clone https://github.com/didou92i/territoria.git territoria
+  git clone --branch v0.2.2 https://github.com/didou92i/territoria.git territoria
   cd territoria
   ```
 
@@ -482,7 +482,7 @@ d'avoir examiné ce dossier.
 
 ## Mise à jour
 
-Le guide d’installation clone la branche principale. Pour une mise à jour, relevez la référence annoncée et validée pour votre installation. Vérifiez qu’elle inclut les correctifs déjà présents sur le poste.
+Le guide d’installation utilise l’étiquette `v0.2.2` du pilote individuel. Pour une mise à jour, relevez la référence annoncée et validée pour votre installation. Vérifiez qu’elle inclut les correctifs déjà présents sur le poste.
 
 ```sh
 read -r -p 'Référence Git validée : ' version
@@ -494,7 +494,7 @@ $version = Read-Host 'Référence Git validée'
 powershell -NoProfile -ExecutionPolicy Bypass -File install\mettre-a-jour.ps1 --version $version
 ```
 
-- **La version** : une étiquette (par exemple `v0.2.1` pour le pilote individuel), ou `origin/<branche>` (par exemple `origin/main`). Un nom de branche seul, `main`,
+- **La version** : une étiquette (par exemple `v0.2.2` pour le pilote individuel), ou `origin/<branche>` (par exemple `origin/main`). Un nom de branche seul, `main`,
   désigne la branche **locale**, que la récupération des nouveautés ne fait pas avancer. `--destination <dossier>` place la
   sauvegarde d'avant la mise à jour ailleurs que dans `territoria-donnees/mises-a-jour/`.
 - **Avant** : le dépôt doit être propre (`git status --porcelain` ne montre rien ; un fichier ajouté ou modifié dans le
