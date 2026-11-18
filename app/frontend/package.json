@@ -1,7 +1,7 @@
 {
   "name": "territoire-ia-components",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "scripts": {
     "build": "esbuild src/index.jsx --bundle --minify --format=iife --platform=browser --target=es2020 --outfile=../public/21st-components.js",
     "test:ui": "esbuild tests/response.test.jsx --bundle --platform=node --format=cjs --external:react --external:react-dom/server --outfile=.response-test.cjs && node --test .response-test.cjs"

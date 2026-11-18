@@ -557,7 +557,7 @@ class AvertissementsTests(Base):
                     self.assertEqual((session['fournisseur'], session['version']), (nom, territoria.VERSION))
             with patch.object(llm_backend, 'read', side_effect=ValueError('réglages illisibles')):
                 self.assertEqual(self.appel('GET', '/api/session')[1]['fournisseur'], '')
-        self.assertEqual(set(self.appel('GET', '/api/session')[1]), {'mode', 'utilisateur', 'roles'})  # ailleurs : inchangé
+        self.assertEqual(set(self.appel('GET', '/api/session')[1]), {'mode', 'utilisateur', 'roles', 'version'})
 
     def test_https_impose_et_pages_hors_des_moteurs_de_recherche(self):
         with self.demonstration(origine='https://demo.exemple.fr'):

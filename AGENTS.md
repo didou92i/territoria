@@ -593,7 +593,7 @@ Les versions de TerritorIA sont des étiquettes git. **C'est l'utilisateur qui l
 
 **Avant.**
 
-- L'utilisateur choisit la version à installer. Préférez **une étiquette** (par exemple `v0.2.0`) ou **`origin/<branche>`**
+- L'utilisateur choisit la version à installer. Préférez **une étiquette** (par exemple `v0.2.1`) ou **`origin/<branche>`**
   (par exemple `origin/main`) : un nom de branche seul, comme `main`, désigne la branche **locale**, que la récupération des
   nouveautés ne fait pas avancer, donc une version ancienne.
 - Le dépôt doit être propre : `git status --porcelain` ne doit rien afficher (les dossiers d'état des éditeurs et des
@@ -604,11 +604,11 @@ Les versions de TerritorIA sont des étiquettes git. **C'est l'utilisateur qui l
 **Commande** (l'utilisateur) :
 
 ```sh
-install/mettre-a-jour.sh --version v0.2.0
+install/mettre-a-jour.sh --version v0.2.1
 ```
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File install\mettre-a-jour.ps1 --version v0.2.0
+powershell -NoProfile -ExecutionPolicy Bypass -File install\mettre-a-jour.ps1 --version v0.2.1
 ```
 
 `--destination <dossier>` place la sauvegarde d'avant la mise à jour dans un dossier existant de son choix.
