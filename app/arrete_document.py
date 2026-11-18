@@ -6,6 +6,7 @@ import branding
 import legal_sources
 from config import REGLAGES
 from territoria.collectivites import lieu_communal
+from territoria.arretes_rh import titre_autorite
 
 MENTION_DEMONSTRATION='Document de démonstration — sans valeur juridique'
 
@@ -19,13 +20,14 @@ ARTICLE_TITLES={
 }
 
 
-def _commune(collectivite):
-    """« Commune de Démoville » → (« Le Maire de la commune de Démoville », « Démoville ») ; (« Le Maire », '') sinon."""
+def _commune(collectivite, contexte=''):
+    """Formule d’autorité et lieu de signature d’un arrêté communal."""
     lieu=lieu_communal(collectivite)
+    titre=titre_autorite(contexte)
     if not lieu:
-        return 'Le Maire',''
+        return titre,''
     genre, suite=collectivite.strip().split(None,1)
-    formule='Le Maire ' if genre.lower()=='mairie' else 'Le Maire de la '+genre.lower()+' '
+    formule=titre+' ' if genre.lower()=='mairie' else titre+' de la '+genre.lower()+' '
     return formule+suite[0].lower()+suite[1:],lieu
 
 
@@ -33,7 +35,7 @@ def assemble(data,generated,legal=None,data_dir=None):
     legal=legal or {};sources=legal.get('sources',[])
     refs={s['article'] for s in sources}
     commune=legal_sources.is_commune(data.get('collectivite',''))
-    maire,lieu=_commune(data.get('collectivite','')) if commune else ('','')
+    maire,lieu=_commune(data.get('collectivite',''),data.get('contexte','')) if commune else ('','')
     authority=data.get('autorite') or (maire if commune else '[Autorité compétente à préciser]')
     signature_place=('Fait à '+lieu+', le [date de signature]') if lieu else '[Lieu et date de signature à compléter]'
     articles=[dict(a) for a in generated['articles']]
@@ -59,7 +61,10 @@ def assemble(data,generated,legal=None,data_dir=None):
         if value.strip():visas.append(value.strip() if re.match(r'^vu\b',value.strip(),re.I) else 'Vu '+value.strip())
     if not visas:visas=['[Références juridiques spécifiques à identifier et vérifier]']
     logo=branding.for_document(data_dir,data.get('collectivite','')) if data_dir else {}
-    return {'title':('Arrêté du maire' if commune else 'Projet d’arrêté')+' n° '+(data.get('numero') or '[à attribuer]'),
+    titre='Projet d’arrêté'
+    if commune:
+        titre='Arrêté de la maire' if re.match(r'^la maire\b',authority,re.I) else 'Arrêté du maire'
+    return {'title':titre+' n° '+(data.get('numero') or '[à attribuer]'),
             'collectivite':data.get('collectivite') or '[Collectivité à préciser]',
             'objet':data.get('objet') or generated['objet'],'autorite':authority,
             'visas':visas,'considerants':[x.strip() for x in generated['considerant'].split('\n\n') if x.strip()],

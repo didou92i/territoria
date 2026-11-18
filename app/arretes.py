@@ -12,6 +12,7 @@ from pathlib import Path
 import corpus_arretes
 import legal_sources
 import branding
+from territoria.arretes_police import attributions_signalisation
 from territoria.deliberations import MESSAGE_REPONSE_INVALIDE, REDACTION_MAX, ReponseInvalide
 
 FIELDS = {
@@ -257,9 +258,17 @@ def read_completion(completion, facts):
         elif re.match(r'^(reglementer|réglementer|prevoir|prévoir|mettre|assurer)\b',text,re.IGNORECASE):
             article['texte']='Il est décidé de '+text[0].lower()+text[1:]
     category=legal_sources.classify(context)
-    implementation=('Une signalisation réglementaire matérialisant les prescriptions du présent arrêté sera mise en place aux emplacements concernés par les services compétents, avant la prise d’effet de la mesure. Elle sera maintenue pendant toute sa durée et retirée à son expiration si la mesure est temporaire.'
-                    if category=='circulation' else
-                    'Les services compétents de la collectivité prendront les dispositions nécessaires à la mise en œuvre de la mesure dans le périmètre et aux périodes définis au présent arrêté, dans le respect de leurs compétences.')
+    if category=='circulation':
+        agents=attributions_signalisation(facts.get('contexte',''))
+        pose=agents.get('pose','les services compétents')
+        entretien=' par '+agents['entretien'] if 'entretien' in agents else ''
+        retrait=' par '+agents['retrait'] if 'retrait' in agents else ''
+        implementation=('Une signalisation réglementaire matérialisant les prescriptions du présent arrêté sera mise en place '
+                        f'aux emplacements concernés par {pose}, avant la prise d’effet de la mesure. Elle sera maintenue{entretien} '
+                        f'pendant toute sa durée et retirée{retrait} à son expiration si la mesure est temporaire.')
+    else:
+        implementation=('Les services compétents de la collectivité prendront les dispositions nécessaires à la mise en œuvre '
+                        'de la mesure dans le périmètre et aux périodes définis au présent arrêté, dans le respect de leurs compétences.')
     # Mise en œuvre et sanctions n'ont de sens que pour une mesure de police ; un acte d'une autre famille (nomination,
     # délégation…) n'a pas encore de trame : on le signale au lieu de lui prêter la structure d'un arrêté de police.
     police=category!='indetermine' or prohibition

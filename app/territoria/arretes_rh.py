@@ -163,10 +163,8 @@ def requete(donnees: dict, modele: str, sources: dict) -> dict:
             'temperature': 0.1, 'max_tokens': REDACTION_MAX}
 
 
-def _autorite(nom_collectivite: str, contexte: str = '') -> tuple[str, str, str]:
-    """Formule, titre et lieu de signature de l'autorité de la collectivité."""
-    lieu = lieu_communal(nom_collectivite)
-    intercommunal = re.search(r'\b(communaute|agglomeration|metropole|syndicat)\b', _plain(nom_collectivite))
+def titre_autorite(contexte: str, intercommunal: bool = False) -> str:
+    """Titre communal ou intercommunal, féminisé à la demande explicite de l'auteur."""
     fonction = 'president(?:e)?' if intercommunal else 'maire'
     institution = r"(?:de (?:la |l[’'])?(?:communaute|commune|metropole|agglomeration)|du syndicat)"
     sujet = rf"(le|la) ({fonction})"
@@ -175,11 +173,19 @@ def _autorite(nom_collectivite: str, contexte: str = '') -> tuple[str, str, str]
     signataire = list(re.finditer(motif, _plain(contexte)))
     feminin = bool(signataire and 'la' in signataire[-1].groups())
     if intercommunal:
-        titre = 'La Présidente' if feminin else 'Le Président'
+        return 'La Présidente' if feminin else 'Le Président'
+    return 'La Maire' if feminin else 'Le Maire'
+
+
+def _autorite(nom_collectivite: str, contexte: str = '') -> tuple[str, str, str]:
+    """Formule, titre et lieu de signature de l'autorité de la collectivité."""
+    lieu = lieu_communal(nom_collectivite)
+    intercommunal = re.search(r'\b(communaute|agglomeration|metropole|syndicat)\b', _plain(nom_collectivite))
+    titre = titre_autorite(contexte, bool(intercommunal))
+    if intercommunal:
         nom = nom_collectivite[0].lower() + nom_collectivite[1:]
         liaison = 'du ' if nom.startswith('syndicat') else 'de l’' if nom.startswith('agglomération') else 'de la '
         return titre + ' ' + liaison + nom, titre, ''
-    titre = 'La Maire' if feminin else 'Le Maire'
     if lieu:
         suite = nom_collectivite.strip().split(None, 1)[1]
         return titre + ' de la commune ' + suite[0].lower() + suite[1:], titre, lieu
