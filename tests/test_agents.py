@@ -6,6 +6,7 @@ Ces documents décrivent ce que le code fait vraiment : une étape citée qui n'
 changé de nom, un code d'échec qui n'est plus produit, et c'est l'assistant (ou le technicien) qui se trompe. Les listes
 de référence sont lues dans les scripts eux-mêmes, jamais recopiées ici.
 """
+import json
 import os
 import re
 import shutil
@@ -16,6 +17,7 @@ from pathlib import Path
 
 import e2e
 import outils
+from territoria import VERSION
 
 RACINE = Path(__file__).resolve().parents[1]
 INSTALL = RACINE / 'install'
@@ -443,6 +445,33 @@ class ContenuImposeTests(unittest.TestCase):
             with self.subTest(document=nom):
                 exemples = section(texte, 'Mise à jour')
                 self.assertEqual(set(re.findall(r'\bv\d+\.\d+\.\d+\b', exemples)), {'v' + version})
+
+    def test_la_distribution_du_pilote_individuel_suit_la_version_du_serveur(self):
+        guide = lire(RACINE / 'docs/guide-debutant.md')
+        installations = (
+            ('README.md', section(self.readme, 'Avant de commencer'), 1),
+            ('guide-debutant.md', section(guide, '3. Récupérer TerritorIA'), 2),
+        )
+        for document, instructions, nombre in installations:
+            commandes = re.findall(r'^[ \t]*git clone\b[^\n]*', instructions, re.M)
+            with self.subTest(document=document):
+                self.assertEqual(len(commandes), nombre)
+            for numero, commande in enumerate(commandes, 1):
+                with self.subTest(document=document, commande=numero):
+                    self.assertRegex(commande, rf'\s(?:--branch[= ]+|-b +)v{re.escape(VERSION)}(?:\s|$)')
+
+        introduction = lire(RACINE / 'docs/pilote.md').partition('\n## ')[0].replace('*', '')
+        with self.subTest(document='pilote.md'):
+            versions = re.findall(r'\bTerritorIA\s+v?(\d+(?:\.\d+)+)\b', introduction)
+            self.assertEqual(set(versions), {VERSION})
+
+        frontend = RACINE / 'app/frontend'
+        paquet = json.loads(lire(frontend / 'package.json'))
+        verrou = json.loads(lire(frontend / 'package-lock.json'))
+        for nom, racine in (('package.json', paquet), ('package-lock.json', verrou),
+                            ('package-lock.json packages[""]', verrou['packages'][''])):
+            with self.subTest(document=nom):
+                self.assertEqual(racine['version'], VERSION)
 
     def test_le_guide_nomme_les_prerequis_que_l_installation_exige(self):
         guide = (RACINE / 'docs' / 'guide-debutant.md').read_text(encoding='utf-8')
