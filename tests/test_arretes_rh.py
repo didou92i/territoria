@@ -85,7 +85,30 @@ class DocumentTests(unittest.TestCase):
         self.assertEqual([a['role'] for a in document['articles']], ['decision', 'decision', 'execution', 'recours'])
         self.assertIn('notification', document['articles'][-1]['texte'])
         self.assertTrue(any('Notifié' in s for s in document['signatures']))
-        self.assertTrue(any('L2131-2' in p for p in document['points']))  # pas de transmission obligatoire au préfet
+        self.assertTrue(any('L2131-2' in p for p in document['points']))
+
+    def test_nomination_stagiaire_ne_certifie_pas_une_notification_seule(self):
+        donnees = {'contexte': NOMINATION, 'collectivite': 'Commune de Testville'}
+        doc = rh.assembler(donnees, rh.lire(completion(), donnees), rh.textes())
+        self.assertIn('transmission', doc['certification'].lower())
+        self.assertIn('notification', doc['certification'].lower())
+        self.assertFalse(any('ne figure pas parmi' in p for p in doc['points']))
+        self.assertTrue(any('L2131-2' in p and 'transmi' in p for p in doc['points']))
+
+    def test_signataire_communautaire_explicitement_designee(self):
+        collectivite = 'Communauté de communes des Rives-de-Lune'
+        signature = ' La présidente de la communauté de communes signe cet arrêté.'
+        donnees = {'contexte': NOMINATION + signature, 'collectivite': collectivite}
+        doc = rh.assembler(donnees, rh.lire(completion(), donnees), rh.textes())
+        self.assertEqual(doc['autorite'], 'La Présidente de la communauté de communes des Rives-de-Lune')
+        self.assertTrue(doc['signatures'][0].startswith('La Présidente,'))
+        donnees['contexte'] = NOMINATION + ' Une copie sera adressée à la présidente du centre de gestion.'
+        doc = rh.assembler(donnees, rh.lire(completion(), donnees), rh.textes())
+        self.assertTrue(doc['autorite'].startswith('Le Président de la communauté'))
+
+    def test_regime_temps_partiel_sur_autorisation_explicite(self):
+        theme = rh.theme('Temps partiel sur autorisation à 80 %, sans lien avec un enfant.')
+        self.assertEqual(theme[0], 'temps_partiel')
 
     def test_le_modele_ne_cite_ni_ne_calcule(self):
         donnees = {'contexte': NOMINATION, 'collectivite': 'Commune de Testville'}
@@ -106,7 +129,7 @@ class ConversationTests(Base):
         self.assertEqual(statut, 200)
         artefact = reponse['artifact']
         self.assertEqual(artefact['kind'], 'arrete_rh')
-        self.assertEqual([s['article'] for s in artefact['legal']['sources']], ['L327-1', 'L327-3', 'L327-7', 'R327-1', 'R327-9', 'R421-1', 'L2131-2'])
+        self.assertEqual([s['article'] for s in artefact['legal']['sources']], ['L327-1', 'L327-3', 'L327-7', 'R327-1', 'R327-9', 'R421-1', 'L2131-1', 'L2131-2'])
         self.assertEqual(reponse['sources'][0]['kind'], 'legifrance')
         statut, word = self.appel('GET', artefact['download'])
         self.assertEqual(statut, 200)

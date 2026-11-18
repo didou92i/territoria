@@ -438,6 +438,24 @@ def liste_partielle(question,sources):
 
 SANS_SENS=None  # web.py : vrai pour un visiteur de la démonstration, dont la question ne part pas au service de plongements
 
+def notions_du_conseil(termes):
+ """Vocabulaire de la question et formulations présentes dans les sources du conseil."""
+ notions=set()
+ if termes.intersection({'bancaire','electoral','election','actionnaire','copropriete'}):return notions
+ if 'quorum' in termes:
+  notions.add('quorum')
+ if termes.intersection({'procuration','pouvoir'}) and termes.intersection({'vote','voter','conseiller','quorum','conseil'}):
+  notions.add('pouvoir')
+ return notions
+
+
+def correspondance_conseil(notions, texte):
+ if not notions:return False
+ texte=' '.join(texte.casefold().split())
+ return (('pouvoir' in notions and ('pouvoir écrit de voter' in texte or 'vote par procuration' in texte)) or
+         ('quorum' in notions and 'majorité de ses membres en exercice est présente' in texte))
+
+
 def search(query,space='all',limit=6,espaces=None):
  """`espaces` : identifiants des espaces lisibles par le compte (None : tous, en mode « un poste »)."""
  terms=set(words(query))
@@ -451,16 +469,19 @@ def search(query,space='all',limit=6,espaces=None):
   sql='SELECT chunks.*,documents.name,documents.filename,documents.sha256,documents.source_url,documents.captured,documents.space_id,spaces.title AS space_title FROM chunks JOIN documents ON documents.id=chunks.doc_id JOIN spaces ON spaces.id=documents.space_id'
   if espaces is not None:rows=c.execute(sql+' WHERE documents.space_id IN ('+','.join('?'*len(espaces))+')',espaces).fetchall()
   else:rows=c.execute(sql+(' WHERE documents.space_id=?' if space!='all' else ''),((space,) if space!='all' else ())).fetchall()
- ranked=[]; requis=MOTS_COMMUNS if len(terms)>QUESTION_COURTE else 1
+ notions=notions_du_conseil(set(words(query,True)))
+ ranked=[]; dispositions=set(); requis=MOTS_COMMUNS if len(terms)>QUESTION_COURTE else 1
  for row in rows:
   doc_terms=words(row['name']+' '+row['content'],metier); matches=terms.intersection(doc_terms)
-  if len(matches)<requis:continue
+  correspond=correspondance_conseil(notions,row['content'])
+  if not correspond and len(matches)<requis:continue
+  if correspond:dispositions.add(row['id'])
   score=sum(1+math.log(1+doc_terms.count(term)) for term in matches)/math.sqrt(max(1,len(doc_terms)/80))
   ranked.append((score,row))
  ranked.sort(key=lambda pair:pair[0],reverse=True)
  # Un passage qui ne partage qu'un mot courant avec la question (« présent » dans « le présent arrêté ») n'est pas une
  # source : seuls restent ceux qui atteignent la moitié du score du meilleur.
- if ranked:ranked=[pair for pair in ranked if pair[0]>=ranked[0][0]*SEUIL_PERTINENCE]
+ if ranked:ranked=[pair for pair in ranked if pair[0]>=ranked[0][0]*SEUIL_PERTINENCE or pair[1]['id'] in dispositions]
  # Recherche par le sens : un extrait proche de la question sans mot commun (« absences » pour « congés ») est retenu
  # s'il atteint le seuil et reste près du meilleur ; les deux classements sont fusionnés par leurs rangs (RRF).
  sims=semantique.similarites(DB,DATA,query,[row['id'] for row in rows]) if rows and not (SANS_SENS and SANS_SENS()) else {}
@@ -472,7 +493,7 @@ def search(query,space='all',limit=6,espaces=None):
   for rang,(_,row) in enumerate(classement):
    fusion.setdefault(row['id'],[0.0,row])[0]+=1/(60+rang)
  # Verification happens against the saved original and extracted page before any result is returned.
- checked=list(verified_docs([row for _,row in sorted(fusion.values(),key=lambda pair:pair[0],reverse=True)[:80]]))
+ checked=list(verified_docs([row for _,row in sorted(fusion.values(),key=lambda pair:(pair[1]['id'] in dispositions,pair[0]),reverse=True)[:80]]))
  output=[]; per_doc={}
  for row in checked:
   if per_doc.get(row['doc_id'],0)>=2:continue
@@ -602,6 +623,19 @@ def _rediger(module,donnees,sources):
   except ReponseInvalide:  # réponse vide ou hors forme : rejouée une fois, avant d'en informer l'agent
    if essai==2:raise
 
+def _exiger_references(sources, articles):
+ """Aucun acte ne part en rédaction sans ses références datées, même si une copie est incomplète."""
+ jour = legal_sources.today()
+ for article in articles:
+  valeur = sources.get(article, {}).get('as_of')
+  try:
+   date = datetime.strptime(valeur, '%Y-%m-%d').date() if isinstance(valeur, str) else None
+  except ValueError:
+   date = None
+  if date is None or date.isoformat() != valeur or valeur > jour:
+   raise ValueError('Les références juridiques nécessaires sont incomplètes ou non datées. Vérifiez le fonds avant de rédiger le projet.')
+ return articles
+
 def _enregistrer_acte(document,genere,sources,cites,vigilances,avertissement,avant):
  """Word, points de vigilance (dont la date des textes) et résultat gardé à côté du Word, communs aux actes rédigés."""
  dossier=DATA/'arretes';dossier.mkdir(parents=True,exist_ok=True,mode=0o700)
@@ -609,10 +643,9 @@ def _enregistrer_acte(document,genere,sources,cites,vigilances,avertissement,ava
  arrete_document.create_word(chemin,document,DATA);os.chmod(chemin,0o600)
  vigilances=list(vigilances)+document['points']+genere['vigilances']
  dates=sorted(sources[a]['as_of'] for a in cites)
- jour=legal_sources.today();plus_ancien=dates[0] if dates else jour
+ jour=legal_sources.today();plus_ancien=dates[0]
  date_lisible='/'.join(reversed(plus_ancien.split('-')))
- vigilances.append(f'Textes vérifiés sur Légifrance aujourd’hui ({date_lisible}).' if plus_ancien==jour else
-                   f'Textes consultés sur Légifrance le {date_lisible} : vérifier qu’ils sont toujours en vigueur avant {avant}.')
+ vigilances.append(f'Les copies des textes cités sont datées du {date_lisible} pour les plus anciennes. Vérifier leur vigueur avant {avant}.')
  if not document['logo'] and not branding.gabarit_file(DATA):vigilances.append('Ajoutez le logo de votre collectivité depuis le bouton « Logo et collectivité » pour l’insérer dans les documents.')
  resultat={'id':ident,'download':'/api/arretes/'+ident+'/file','document':document,'vigilances':vigilances,
   'legal':{'as_of':plus_ancien,'status':'bases_disponibles' if plus_ancien==jour else 'cache_date','sources':[{k:sources[a].get(k) for k in ('code','article','url','as_of','sha256')} for a in cites]},
@@ -623,9 +656,9 @@ def _enregistrer_acte(document,genere,sources,cites,vigilances,avertissement,ava
 def draft_deliberation(donnees):
  """Projet de délibération : rédaction par le modèle local (objet, considérants, décisions), le reste fixe et vérifié."""
  sources=deliberations.textes(DATA,REGLAGES.hors_ligne)
+ cites=_exiger_references(sources,deliberations.theme(donnees['contexte'])[2]+('L2121-17','L2121-20','L2121-23','L2131-1','R421-1'))
  genere=_rediger(deliberations,donnees,sources)
  document=deliberations.assembler(donnees,genere,sources,branding.for_document(DATA,donnees.get('collectivite','')))
- cites=[a for a in deliberations.theme(donnees['contexte'])[2]+('L2121-17','L2121-20','L2121-23','L2131-1','R421-1') if a in sources]
  return _enregistrer_acte(document,genere,sources,cites,
   ['Vérifier les éléments de séance saisis et compléter les champs manquants.'],
   'Projet non adopté. Vérifier les éléments de séance, le vote, la compétence et les textes particuliers.','la séance')
@@ -633,9 +666,9 @@ def draft_deliberation(donnees):
 def draft_arrete_rh(donnees):
  """Projet d'arrêté individuel sur la carrière d'un fonctionnaire : même partage que pour une délibération."""
  sources=arretes_rh.textes(DATA,REGLAGES.hors_ligne)
+ cites=_exiger_references(sources,arretes_rh.theme(donnees['contexte'])[2]+arretes_rh.SOURCES_FIXES)
  genere=_rediger(arretes_rh,donnees,sources)
  document=arretes_rh.assembler(donnees,genere,sources,branding.for_document(DATA,donnees.get('collectivite','')))
- cites=[a for a in arretes_rh.theme(donnees['contexte'])[2]+arretes_rh.SOURCES_FIXES if a in sources]
  return _enregistrer_acte(document,genere,sources,cites,
   ['Compléter les visas propres au cadre d’emplois et à la collectivité, puis vérifier le grade, les dates et le classement.'],
   'Projet d’arrêté non signé. Les visas propres au cadre d’emplois, le classement et les dates restent à compléter et à vérifier.','la signature')
@@ -643,27 +676,27 @@ def draft_arrete_rh(donnees):
 def draft_arrete_police(donnees):
  """Projet d'arrêté de police temporaire (circulation pendant des travaux, occupation du domaine public)."""
  sources=arretes_police.textes(DATA,REGLAGES.hors_ligne)
+ cites=_exiger_references(sources,arretes_police.theme(donnees['contexte'])['articles']+arretes_police.SOURCES_FIXES)
  genere=_rediger(arretes_police,donnees,sources)
  document=arretes_police.assembler(donnees,genere,sources,branding.for_document(DATA,donnees.get('collectivite','')))
- cites=[a for a in arretes_police.theme(donnees['contexte'])['articles']+arretes_police.SOURCES_FIXES if a in sources]
  return _enregistrer_acte(document,genere,sources,cites,
-  ['Compléter la demande et la délibération visées'+(' et l’exécutant de la signalisation' if _signalisation(document) else '')
+  ['Compléter la demande et la délibération visées'+(' et l’exécutant de la signalisation' if _signalisation_a_preciser(document) else '')
    +', puis vérifier les lieux, les dates et les horaires.'],
   'Projet d’arrêté non signé. Les lieux, les dates, la compétence et les textes particuliers restent à compléter et à vérifier.','la signature')
 
 def draft_arrete_delegation(donnees):
  """Projet d'arrêté du maire portant délégation (fonction, signature, certification, état civil)."""
  sources=arretes_delegations.textes(DATA,REGLAGES.hors_ligne)
+ cites=_exiger_references(sources,arretes_delegations.theme(donnees['contexte'])['articles']+arretes_delegations.SOURCES_FIXES)
  genere=_rediger(arretes_delegations,donnees,sources)
  document=arretes_delegations.assembler(donnees,genere,sources,branding.for_document(DATA,donnees.get('collectivite','')))
- cites=[a for a in arretes_delegations.theme(donnees['contexte'])['articles']+arretes_delegations.SOURCES_FIXES if a in sources]
  return _enregistrer_acte(document,genere,sources,cites,
   ['Vérifier la qualité du délégataire, la liste précise des matières déléguées et la date d’effet.'],
   'Projet d’arrêté non signé. Le délégataire, les matières déléguées et les dates restent à vérifier.','la signature')
 
-def _signalisation(document):
- """Un arrêté d'occupation (échafaudage, terrasse) n'a pas d'article de signalisation : ses messages n'en parlent pas."""
- return any(a.get('role')=='signalisation' for a in document.get('articles',[]))
+def _signalisation_a_preciser(document):
+ """Le message invite à compléter la signalisation seulement si une attribution manque dans la clause."""
+ return any(a.get('role')=='signalisation' and '[' in a['texte'] for a in document.get('articles',[]))
 
 MESSAGE_POLICE_SANS_SIGNALISATION=('Votre projet d’arrêté est rédigé ci-dessous. Complétez la demande, demandez une modification dans '
                                    'cette conversation ou téléchargez le Word.')
@@ -705,8 +738,10 @@ def passages_du_projet(projet):
  """Passages visibles du projet pour en expliquer le contenu, y compris les points à vérifier."""
  doc=projet['document']
  lignes=[doc.get(cle,'') for cle in ('title','collectivite','objet','autorite')]
+ lignes.extend(doc.get('preambule',[]))
  lignes.extend(doc.get('visas',[]))
  lignes.extend(doc.get('considerants',[]))
+ if doc.get('vote'):lignes.append(doc['vote'])
  for article in doc.get('articles',[]):
   lignes.append(f"Article {article.get('number','')} {article.get('title','')} — {article['texte']}")
  lignes.extend([doc.get('lieu_date',''),*doc.get('signatures',[]),*projet.get('vigilances',[])])
@@ -728,17 +763,20 @@ def chat(payload,utilisateur='',espaces=None):
   last_assistant=next((row for row in history if row['role']=='assistant'),None)
   projet_id=last_assistant['id'] if last_assistant else None
   previous=json.loads(last_assistant['artifact']) if last_assistant else {}
-  if previous.get('kind')=='question_arrete':
+  if previous.get('kind') in ('question_arrete','question_deliberation'):
    projet_id=previous.get('message_projet')
    ligne=c.execute("SELECT artifact FROM messages WHERE conversation_id=? AND id=? AND role='assistant'",(conv,projet_id)).fetchone()
    previous=json.loads(ligne['artifact']) if ligne else {}
- sur_arrete=previous.get('kind','').startswith('arrete')
- question_acte=arrete_conversation.demande_acte(question,aid) if aid in ('arrete','compte-rendu') or sur_arrete else question
+ genre_precedent=previous.get('kind','')
+ sur_acte=genre_precedent.startswith('arrete') or genre_precedent=='deliberation'
+ question_acte=arrete_conversation.demande_acte(question,aid) if aid in ('arrete','compte-rendu') or sur_acte else question
+ if genre_precedent=='deliberation' and deliberations.demande_de_lecture(question):question_acte=''
  artifact={}
  passages=[]
- if not question_acte and sur_arrete and previous.get('document') and aid!='compte-rendu':
+ if not question_acte and sur_acte and previous.get('document') and aid!='compte-rendu':
   passages=passages_du_projet(previous)
-  artifact={'kind':'question_arrete','message_projet':projet_id}
+  genre_question='question_deliberation' if genre_precedent=='deliberation' else 'question_arrete'
+  artifact={'kind':genre_question,'message_projet':projet_id}
  if question_acte and deliberations.est_demande(question_acte,previous,aid):
   donnees,clarification=deliberations.preparer(question,previous,arrete_conversation.branding.profile(DATA)['collectivite'])
   if clarification:
@@ -752,7 +790,7 @@ def chat(payload,utilisateur='',espaces=None):
    if clarification:
     return save_chat(conv,question,clarification,[],mode,space,aid,{'kind':genre+'_clarification','inputs':donnees},False,utilisateur)
    resultat=rediger(donnees)
-   if genre=='arrete_police' and not _signalisation(resultat['document']):answer=MESSAGE_POLICE_SANS_SIGNALISATION
+   if genre=='arrete_police' and not _signalisation_a_preciser(resultat['document']):answer=MESSAGE_POLICE_SANS_SIGNALISATION
    return save_chat(conv,question,answer,sources_acte(resultat,module.textes(DATA,True)),mode,space,aid,{**resultat,'kind':genre,'inputs':donnees},True,utilisateur)
  if question_acte and arrete_conversation.is_drafting(question_acte,previous,aid):
   data,clarification=arrete_conversation.prepare(question,previous,DATA)

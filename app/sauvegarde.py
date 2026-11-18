@@ -57,7 +57,10 @@ NOM_ARCHIVE = re.compile(r'territoria-(\d{8})-(\d{6})\.tsv1')
 MANIFESTE = 'MANIFESTE.json'
 FICHIER_MOT_DE_PASSE = 'sauvegarde.motdepasse'
 RACINES = ('territoria', 'n8n', 'secrets')
-BASES = ('territoria/territoire.sqlite3', 'n8n/database.sqlite')
+BASE_TERRITORIA = 'territoria/territoire.sqlite3'
+BASE_N8N = 'n8n/database.sqlite'
+BASES = (BASE_TERRITORIA, BASE_N8N)
+TABLES_PILOTE = {'spaces', 'documents', 'chunks', 'assistants', 'conversations', 'messages'}
 FICHIERS_N8N = ('database.sqlite', 'config')
 EXCLUS_SECRETS = (FICHIER_MOT_DE_PASSE, 'provision')
 EXCLUS_TERRITORIA = ('audio',)  # enregistrements des séances, effacés après la relecture
@@ -88,7 +91,7 @@ class CibleNonVide(ValueError):
 
 class SourceInvalide(ValueError):
     def __init__(self):
-        super().__init__('Dossier de données invalide : territoria/ est introuvable.')
+        super().__init__('Source incomplète : base ou documents absents ou non conformes.')
 
 
 class RestaurationInterrompue(RuntimeError):
@@ -328,15 +331,18 @@ def _ecrire_tar(source: Path, flux: _EcritureChiffree) -> None:
             tarfile.open(fileobj=flux, mode='w|', format=tarfile.PAX_FORMAT) as tar:
         for nom, chemin, st in _elements(source):
             if stat.S_ISDIR(st.st_mode):
+                if nom in ('territoria', 'n8n'):
+                    (Path(copies) / nom).mkdir()
                 tar.addfile(_entete(nom, st, dossier=True))
             elif nom in BASES:
-                copie = Path(copies) / 'copie.sqlite'
+                copie = Path(copies) / nom
                 _copier_base(chemin, copie)
                 _ajouter_fichier(tar, nom, copie, empreintes, meta=st)
-                copie.unlink()
             else:
                 with contextlib.suppress(FileNotFoundError):  # supprimé depuis le parcours : il ne fait plus partie des données
                     _ajouter_fichier(tar, nom, chemin, empreintes)
+        if not _contenu_conforme(Path(copies), empreintes):
+            raise SourceInvalide()
         corps = json.dumps(empreintes, ensure_ascii=False, indent=2, sort_keys=True).encode('utf-8') + b'\n'
         info = tarfile.TarInfo(MANIFESTE)
         info.size, info.mode, info.mtime = len(corps), 0o600, int(time.time())
@@ -429,13 +435,44 @@ def _manifeste(donnees: bytes) -> dict | None:
     return manifeste
 
 
-def _base_saine(chemin: Path) -> bool:
+def _base_saine(chemin: Path, tables_attendues: frozenset | set = frozenset()) -> bool:
     try:  # immutable : ni verrou ni fichier -wal/-shm créé à côté de la copie
         connexion = sqlite3.connect(f'{chemin.resolve().as_uri()}?mode=ro&immutable=1', uri=True)
         try:
+            if tables_attendues:
+                tables = {nom for (nom,) in connexion.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+                if not tables_attendues <= tables:
+                    return False
             return connexion.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
         finally:
             connexion.close()
+    except sqlite3.DatabaseError:
+        return False
+
+
+def _contenu_conforme(racine: Path, empreintes: dict) -> bool:
+    """Compare le schéma historique et les références documentaires aux octets réellement archivés."""
+    if BASE_TERRITORIA not in empreintes or not _base_saine(racine / BASE_TERRITORIA, TABLES_PILOTE):
+        return False
+    if (racine / 'n8n').is_dir() and (BASE_N8N not in empreintes or not _base_saine(racine / BASE_N8N, {'workflow_entity'})):
+        return False
+    adresse = (racine / BASE_TERRITORIA).resolve().as_uri() + '?mode=ro&immutable=1'
+    try:
+        with contextlib.closing(sqlite3.connect(adresse, uri=True)) as connexion:
+            for nom, sha in connexion.execute('SELECT filename, sha256 FROM documents'):
+                if (not isinstance(nom, str) or nom in ('', '.', '..') or Path(nom).name != nom
+                        or not isinstance(sha, str) or empreintes.get(f'territoria/documents/{nom}') != sha):
+                    return False
+            # Les archives antérieures à la migration 13 n'ont aucune fiche de publication.
+            if not connexion.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='publications'").fetchone():
+                return True
+            actes = connexion.execute("SELECT id, empreinte_pdf FROM publications "
+                                      "WHERE empreinte_pdf <> '' OR statut IN ('publie', 'retire')")
+            for ident, sha in actes:
+                if (not isinstance(ident, str) or not re.fullmatch(r'[0-9a-f]{32}', ident)
+                        or not isinstance(sha, str) or empreintes.get(f'territoria/publication/{ident}/publie.pdf') != sha):
+                    return False
+            return True
     except sqlite3.DatabaseError:
         return False
 
@@ -481,7 +518,7 @@ def _extraire(archive: Path, mot_de_passe: str, racine: Path) -> _Extraction:
         except tarfile.TarError:
             raise ArchiveNonConforme() from None
         flux.terminer()
-    conforme = manifeste == empreintes and all(_base_saine(racine / base) for base in BASES if base in empreintes)
+    conforme = manifeste == empreintes and _contenu_conforme(racine, empreintes)
     return _Extraction(empreintes, elements, conforme)
 
 

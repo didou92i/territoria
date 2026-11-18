@@ -34,7 +34,7 @@ ISOLATION = ['-e', 'POWERSHELL_TELEMETRY_OPTOUT=1', '-e', 'XDG_CACHE_HOME=/tmp/x
              '-e', 'PSModuleAnalysisCachePath=/tmp/xdg/psanalysis']
 
 CAS_ATTENDUS = (
-    'analyse_syntaxique', 'aucun_alias_en_collision', 'chargement_sans_effet', 'diagnostic_treize_cles',
+    'analyse_syntaxique', 'aucun_alias_en_collision', 'chargement_sans_effet', 'diagnostic_treize_cles', 'bitlocker_volume_cible',
     'simulation_etape_moteur', 'simulation_etape_lmstudio', 'simulation_etape_mistral', 'simulation_etape_secrets', 'simulation_etape_legifrance',
     'simulation_etape_demarrer', 'simulation_etape_n8n', 'simulation_etape_demo', 'simulation_etape_verifier',
     'simulation_etape_raccourci', 'simulation_etape_sauvegarde-auto', 'simulation_legifrance_sans_saisie_piste',
@@ -107,6 +107,12 @@ def pwsh_dans_conteneur(arguments, reseau, delai):
 
 
 class StructureTests(unittest.TestCase):
+    def test_bitlocker_interroge_le_volume_du_dossier_de_donnees(self):
+        diagnostic = code('diagnostic.ps1')
+        self.assertIn('Get-Volume -FilePath', diagnostic)
+        self.assertIn('Get-BitLockerVolume -MountPoint', diagnostic)
+        self.assertNotIn("'-status', 'C:'", diagnostic)
+
     def test_sept_scripts_comme_les_sh(self):
         self.assertEqual(sorted(p.stem for p in INSTALL.glob('*.ps1')), sorted(NOMS))
         for nom in NOMS:

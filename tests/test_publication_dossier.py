@@ -56,10 +56,20 @@ class DossierTests(unittest.TestCase):
 
     def test_pdf_caracteres_typographiques(self):
         # Review Focus 4.
-        a = acte(passages=[], paragraphes=['Une œuvre pour l’école, « gratuite », 15 € ; émoji ☺ remplacé.'])
+        a = acte(passages=[], paragraphes=['Une œuvre pour l’école, « gratuite », 15 €.'])
         texte = texte_pdf(dossier.pdf(a, a['paragraphes'], 'Commune', '2026-11-03'))
         for morceau in ('œuvre', 'l’école', '« gratuite »', '15 €'):
             self.assertIn(morceau, texte)
+
+    def test_ne_remplace_pas_un_nom_hors_winansi_par_des_points_d_interrogation(self):
+        a = acte(passages=[], paragraphes=['Responsable désignée : 李明。'])
+        with self.assertRaisesRegex(ValueError, 'caractère'):
+            dossier.dossier([a], [], PROFIL, aujourdhui())
+
+    def test_collision_de_noms_entre_anciennes_fiches_signalee(self):
+        ancienne = acte(id='b' * 32, numero='D2026-012', publie_le=aujourdhui())
+        with self.assertRaisesRegex(ValueError, 'même fichier'):
+            dossier.dossier([acte()], [ancienne], PROFIL, aujourdhui())
 
     def test_index_echappe_le_html(self):
         # Review Focus 3.
@@ -121,9 +131,12 @@ class DossierTests(unittest.TestCase):
             dossier.dossier([acte()], [], PROFIL, hier)
         self.assertEqual(str(erreur.exception), 'La date de mise en ligne ne peut pas être passée.')
 
-    def test_dossier_vide_refuse(self):
-        with self.assertRaises(ValueError):
-            dossier.dossier([], [], PROFIL, aujourdhui())
+    def test_export_des_index_vides(self):
+        octets, empreintes = dossier.dossier([], [], PROFIL, aujourdhui())
+        with zipfile.ZipFile(io.BytesIO(octets)) as archive:
+            self.assertEqual(sorted(archive.namelist()), ['LISEZ-MOI.txt', 'deliberations.csv', 'index.html'])
+            self.assertEqual(archive.read('deliberations.csv').decode().strip(), EN_TETE)
+        self.assertEqual(empreintes, {})
 
 
 class RelectureFinaleDossierTests(unittest.TestCase):

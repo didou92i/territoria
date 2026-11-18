@@ -36,6 +36,9 @@ _CHAMP_PROJET = re.compile(r'\[(?:[^\[\]\n]{0,80}\bà\s+(?:compléter|préciser|
                            r'|\s*(?:date(?:\s+de\s+signature)?|nom\s+et\s+signature)\s*)\]'
                            r"|\bsignature à apposer par l[’']autorité compétente\b", re.I)
 MESSAGE_WORD = 'Fichier Word trop volumineux ou invalide.'
+MESSAGE_GRAPHIQUE = ('Le dossier de publication restitue uniquement le texte. Cette source comporte un élément graphique, '
+                     'une annexe ou un contenu que TerritorIA ne peut pas reproduire fidèlement. '
+                     'Préparez la copie publique complète avec un outil adapté.')
 WORD_ENTREES_MAX = 1000
 WORD_TAILLE_MAX = 50 * 1024 * 1024  # décompressé, en tout
 WORD_COMPRESSIBLE_MAX = 5 * 1024 * 1024  # décompressé, parties très compressibles : le XML lu en mémoire
@@ -76,7 +79,13 @@ def _blocs(element):
     (une rangée par bloc, cellules séparées par « | », tableaux imbriqués compris) et contrôles de contenu."""
     for enfant in element:
         if enfant.tag == W + 'p':
-            yield ''.join(t.text or '' for t in enfant.iter(W + 't')).strip()
+            morceaux = []
+            for noeud in enfant.iter():
+                if noeud.tag == W + 't':
+                    morceaux.append(noeud.text or '')
+                elif noeud.tag in (W + 'br', W + 'cr', W + 'tab'):
+                    morceaux.append(' ')
+            yield ''.join(morceaux).strip()
         elif enfant.tag == W + 'tbl':
             for rangee in enfant.findall(W + 'tr'):
                 cellules = [' '.join(b for b in _blocs(cellule) if b) for cellule in rangee.findall(W + 'tc')]
@@ -117,13 +126,60 @@ def paragraphes_docx(chemin: Path) -> list[str]:
         document = Document(str(chemin))
     except Exception:
         raise ValueError(MESSAGE_WORD) from None
-    # Le papier à en-tête et le pied ne sont pas repris dans le PDF ; garder la mention de projet pour le contrôle.
-    blocs = [b for partie in document.part.related_parts.values() if isinstance(partie, (HeaderPart, FooterPart))
-             for b in _blocs(partie.element) if MENTION_PROJET.fullmatch(b)]
-    blocs.extend(b for b in _blocs(document.element.body) if b)
+    # La numérotation automatique héritée d'un style n'est pas dans les fragments de texte.
+    styles_numerotes = set()
+    for style in document.styles:
+        if style.element.find('.//' + W + 'numPr') is not None:
+            styles_numerotes.add(style.style_id)
+    entetes = [p.element for p in document.part.related_parts.values() if isinstance(p, HeaderPart)]
+    pieds = [p.element for p in document.part.related_parts.values() if isinstance(p, FooterPart)]
+    blocs = []
+    for element in [*entetes, document.element.body, *pieds]:
+        for noeud in element.iter():
+            if noeud.tag in _WORD_NON_RESTITUE:
+                raise ValueError(MESSAGE_GRAPHIQUE)
+            if noeud.tag == W + 'pStyle' and noeud.get(W + 'val') in styles_numerotes:
+                raise ValueError(MESSAGE_GRAPHIQUE)
+        blocs.extend(b for b in _blocs(element) if b)
     if sum(len(b) for b in blocs) > TEXTE_MAX:
         raise ValueError(MESSAGE_WORD)
     return blocs
+
+
+_WORD_NON_RESTITUE = {W + nom for nom in ('drawing', 'pict', 'object', 'altChunk', 'footnoteReference', 'endnoteReference',
+                                          'sym', 'numPr', 'subDoc', 'contentPart')} | {
+    '{http://schemas.openxmlformats.org/officeDocument/2006/math}oMath',
+    '{http://schemas.openxmlformats.org/markup-compatibility/2006}AlternateContent'}
+# Ces opérateurs peignent une forme, une image ou une ressource, ou découpent le rendu visible.
+_PDF_NON_RESTITUE = set(b'S s f F f* B B* b b* sh Do W W*'.split()) | {b'INLINE IMAGE'}
+
+
+def paragraphes_pdf(chemin: Path) -> list[str]:
+    """Publication des PDF texte. Une transcription OCR ne peut pas reproduire le périmètre d'un plan."""
+    from pypdf import PdfReader
+    lecteur = PdfReader(str(chemin))
+    if lecteur.is_encrypted:
+        raise ValueError('Ce PDF est protégé ; fournissez une version non chiffrée.')
+    if lecteur.root_object.get('/AF') or '/EmbeddedFiles' in (lecteur.root_object['/Names'] if '/Names' in lecteur.root_object else {}):
+        raise ValueError(MESSAGE_GRAPHIQUE)
+    paragraphes, courant = [], []
+    for numero, page in enumerate(lecteur.pages, 1):
+        contenu = page.get_contents()
+        if (page.get('/Annots') or page.get('/AF') or
+                (contenu is not None and any(op in _PDF_NON_RESTITUE for _, op in contenu.operations))):
+            raise ValueError(f'Page {numero}. {MESSAGE_GRAPHIQUE}')
+        texte = page.extract_text() or ''
+        if not texte.strip() and contenu is not None and any(op in (b'Tj', b'TJ', b"'", b'"') for _, op in contenu.operations):
+            raise ValueError(f'Page {numero}. {MESSAGE_GRAPHIQUE}')
+        for ligne in texte.splitlines():
+            if MENTION_PROJET.fullmatch(ligne.strip()):
+                raise ValueError(MESSAGE_PROJET)
+            if ligne.strip():
+                courant.append(ligne.strip())
+                if ligne.rstrip().endswith(('.', ';', ':')):
+                    paragraphes.append(' '.join(courant))
+                    courant = []
+    return paragraphes + ([' '.join(courant)] if courant else [])
 
 
 def paragraphes_du_registre(donnees_dir: Path, acte_id: str) -> list[str]:
@@ -197,29 +253,40 @@ def creer(base: Path, donnees_dir: Path, *, type: str, numero: str, date_acte: s
         raise ValueError('Acte trop long pour être publié ici.')
     objet = _texte(objet, 'Indiquez l’objet de l’acte.', 300)
     verifier_version(objet, paragraphes)
-    fichier = _nom_fichier(_texte(numero, 'Indiquez le numéro de l’acte.', 60))
-    with ouvrir(base) as c:
-        if not visiteurs_a_part:
-            numeros = c.execute('SELECT numero FROM publications')
-        elif c.execute(_VISITEURS + ' AND id=?', (par or '',)).fetchone():
-            numeros = c.execute('SELECT numero FROM publications WHERE cree_par=?', (par,))
-        else:
-            numeros = c.execute(f'SELECT numero FROM publications WHERE cree_par NOT IN ({_VISITEURS})')
-        if any(_nom_fichier(l['numero']) == fichier for l in numeros):
-            raise ValueError('Ce numéro est déjà dans les actes à publier.')  # « D2026/012 » et « D2026-012 » : un même PDF
-    ligne = {'id': uuid.uuid4().hex, 'type': type, 'numero': _texte(numero, 'Indiquez le numéro de l’acte.', 60),
-             'date_acte': _date(date_acte), 'objet': objet, 'source': source,
+    numero = _texte(numero, 'Indiquez le numéro de l’acte.', 60)
+    date_acte = _date(date_acte)
+    ligne = {'id': uuid.uuid4().hex, 'type': type, 'numero': numero,
+             'date_acte': date_acte, 'objet': objet, 'source': source,
              'acte_id': acte_id or '', 'matiere_code': matiere_code, 'votes': json.dumps(_votes(votes)),
              'cree_par': par or '', 'cree_le': _maintenant()}
     ecrire_prive(dossier(donnees_dir, ligne['id']) / 'texte.json', json.dumps(paragraphes, ensure_ascii=False).encode('utf-8'))
     try:
         with ouvrir(base) as c:
+            c.execute('BEGIN IMMEDIATE')
             if avant_ecriture:
-                c.execute('BEGIN IMMEDIATE')  # contrôle et écriture d'un seul tenant
                 avant_ecriture(c)
+            # Une seule version active par nom de fichier, dans le périmètre du registre concerné.
+            requete = 'SELECT id, numero, type, date_acte, statut FROM publications'
+            parametres = ()
+            if visiteurs_a_part:
+                if c.execute(_VISITEURS + ' AND id=?', (par or '',)).fetchone():
+                    requete += ' WHERE cree_par=?'
+                    parametres = (par,)
+                else:
+                    requete += f' WHERE cree_par NOT IN ({_VISITEURS})'
+            fichier = _nom_fichier(numero).casefold()
+            ligne['remplace_id'] = ''
+            for precedente in c.execute(requete + ' ORDER BY rowid DESC', parametres):
+                if _nom_fichier(precedente['numero']).casefold() != fichier:
+                    continue
+                if (precedente['statut'] != 'retire' or precedente['numero'] != numero or
+                        precedente['type'] != type or precedente['date_acte'] != date_acte):
+                    raise ValueError('Ce numéro est déjà dans les actes à publier.')
+                if not ligne['remplace_id']:
+                    ligne['remplace_id'] = precedente['id']
             c.execute('INSERT INTO publications(id, type, numero, date_acte, objet, source, acte_id, matiere_code, votes, cree_par, '
-                      'cree_le) VALUES (:id, :type, :numero, :date_acte, :objet, :source, :acte_id, :matiere_code, :votes, '
-                      ':cree_par, :cree_le)', ligne)
+                      'cree_le, remplace_id) VALUES (:id, :type, :numero, :date_acte, :objet, :source, :acte_id, :matiere_code, :votes, '
+                      ':cree_par, :cree_le, :remplace_id)', ligne)
     except Exception:
         shutil.rmtree(dossier(donnees_dir, ligne['id']), ignore_errors=True)  # texte déjà écrit pour un acte qui n'existera pas
         raise
@@ -256,13 +323,23 @@ def lire(base: Path, donnees_dir: Path, ident: str) -> dict:
     return acte
 
 
+def avec_apercu(acte: dict) -> dict:
+    """Aperçu de la fiche de relecture, calculé avec les occurrences du PDF pour chaque bloc."""
+    blocs = [acte['objet'], *acte['paragraphes']]
+    return acte | {'zones_relecture': [anonymisation.zones_relecture(bloc, acte['passages']) for bloc in blocs]}
+
+
 def liste(base: Path, proprietaire: str | None = None, visiteurs_a_part: bool = False) -> list[dict]:
     """Les actes d'un propriétaire, ou tous ; en démonstration, « tous » laisse de côté les actes d'essai des visiteurs."""
-    sans_visiteurs = f' AND cree_par NOT IN ({_VISITEURS})' if visiteurs_a_part and proprietaire is None else ''
     with ouvrir(base) as c:
-        lignes = c.execute('SELECT * FROM publications WHERE (? IS NULL OR cree_par=?)' + sans_visiteurs +
-                           ' ORDER BY cree_le DESC, rowid DESC', (proprietaire, proprietaire)).fetchall()
-    return [_public(l) for l in lignes]
+        return [_public(l) for l in _lignes_visibles(c, proprietaire, visiteurs_a_part)]
+
+
+def _lignes_visibles(c, proprietaire, visiteurs_a_part, *, index=False):
+    sans_visiteurs = f' AND cree_par NOT IN ({_VISITEURS})' if visiteurs_a_part and proprietaire is None else ''
+    colonnes, statut = ('id, revision', " AND statut='publie'") if index else ('*', '')
+    return c.execute(f'SELECT {colonnes} FROM publications WHERE (? IS NULL OR cree_par=?)' + sans_visiteurs + statut +
+                     ' ORDER BY cree_le DESC, rowid DESC', (proprietaire, proprietaire))
 
 
 def _passages(valeur) -> list[dict]:
@@ -278,29 +355,43 @@ def _passages(valeur) -> list[dict]:
     return passages
 
 
-def enregistrer_passages(base: Path, ident: str, passages: list[dict]) -> dict:
-    """Remplace les passages ; un acte validé repasse à relire (la validation ne couvrait que les passages qu'elle a vus)."""
+class RevisionPerimee(ValueError):
+    """La fiche à l'écran et la version actuellement enregistrée ne correspondent plus."""
+
+
+def verifier_revision(acte, attendue):
+    if type(attendue) is not int or attendue != acte['revision']:
+        raise RevisionPerimee('La version affichée est ancienne ou absente. Rouvrez la fiche ou la liste et relisez-la avant de continuer.')
+
+
+def _enregistrer_relecture(base, ident, passages, revision, reperage=None):
     passages = _passages(passages)
     with ouvrir(base) as c:
-        refuser_si_fige(_ligne(c, ident))
-        c.execute("UPDATE publications SET passages=?, statut='a_relire', valide_par='', valide_le='', empreinte_pdf='', "
-                  "date_dossier='' WHERE id=?", (json.dumps(passages, ensure_ascii=False), ident))
+        c.execute('BEGIN IMMEDIATE')
+        acte = _ligne(c, ident)
+        refuser_si_fige(acte)
+        verifier_revision(acte, revision)
+        date, avertissement = reperage if reperage is not None else (acte['repere_le'], acte['avertissement'])
+        c.execute("UPDATE publications SET passages=?, repere_le=?, avertissement=?, statut='a_relire', valide_par='', "
+                  "valide_le='', empreinte_pdf='', date_dossier='' WHERE id=?",
+                  (json.dumps(passages, ensure_ascii=False), date, avertissement, ident))
         return _public(_ligne(c, ident))
 
 
-def enregistrer_reperage(base: Path, ident: str, passages: list[dict], avertissement: str | None) -> dict:
-    """Passages proposés par le repérage, sa date, et l'avertissement quand l'IA n'a pas cherché les noms : celui qui
-    valide le voit."""
-    acte = enregistrer_passages(base, ident, passages)
-    with ouvrir(base) as c:
-        c.execute('UPDATE publications SET repere_le=?, avertissement=? WHERE id=?', (_maintenant(), avertissement or '', ident))
-        return _public(_ligne(c, ident))
+def enregistrer_passages(base: Path, ident: str, passages: list[dict], revision: int) -> dict:
+    """Une édition s'applique uniquement à la version dont les cases ont été relues."""
+    return _enregistrer_relecture(base, ident, passages, revision)
 
 
-def valider(base: Path, donnees_dir: Path, ident: str, par: str) -> dict:
-    """Pas de validation sans repérage, ni avec un passage coché qui ne masquerait rien."""
+def enregistrer_reperage(base: Path, ident: str, passages: list[dict], avertissement: str | None, revision: int) -> dict:
+    return _enregistrer_relecture(base, ident, passages, revision, (_maintenant(), avertissement or ''))
+
+
+def valider(base: Path, donnees_dir: Path, ident: str, par: str, revision: int) -> dict:
+    """Vérifie la fiche relue et engage la validation seulement si cette même révision est toujours en vigueur."""
     acte = lire(base, donnees_dir, ident)
     refuser_si_fige(acte)
+    verifier_revision(acte, revision)
     if not acte['repere_le']:
         raise ValueError('Lancez d’abord le repérage des données personnelles.')
     verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
@@ -310,33 +401,67 @@ def valider(base: Path, donnees_dir: Path, ident: str, par: str) -> dict:
             raise ValueError(f'Passage introuvable dans le texte : « {passage["texte"]} ». Décochez-le, puis sélectionnez '
                              'le passage exact dans le texte.')
     with ouvrir(base) as c:
+        c.execute('BEGIN IMMEDIATE')
+        verifier_revision(_ligne(c, ident), revision)
         c.execute("UPDATE publications SET statut='valide', valide_par=?, valide_le=? WHERE id=?", (par or '', _maintenant(), ident))
         return _public(_ligne(c, ident))
 
 
-def enregistrer_dossier(base: Path, donnees_dir: Path, ident: str, empreinte: str, pdf: bytes, date_dossier: str) -> None:
-    """PDF du dossier, gardé avec son empreinte et sa date : on pourra prouver que le fichier en ligne est celui validé,
-    et la mise en ligne prend la date imprimée sur le PDF."""
+def enregistrer_dossiers(base, donnees_dir, produits, revisions, date_dossier, *, index=None):
+    """Engage ensemble les empreintes du lot après vérification de toutes les révisions utilisées pour le rendre."""
+    date_dossier = _date(date_dossier)
     with ouvrir(base) as c:
-        if _ligne(c, ident)['statut'] != 'valide':
-            raise ValueError('Seul un acte validé entre dans un dossier de publication.')
-        ecrire_prive(dossier(donnees_dir, ident) / 'publie.pdf', pdf)
-        c.execute('UPDATE publications SET empreinte_pdf=?, date_dossier=? WHERE id=?', (empreinte, _date(date_dossier), ident))
+        c.execute('BEGIN IMMEDIATE')
+        if index is not None:
+            proprietaire, visiteurs_a_part, attendus = index
+            actuels = [tuple(l) for l in _lignes_visibles(c, proprietaire, visiteurs_a_part, index=True)]
+            if actuels != attendus:
+                raise RevisionPerimee('Les actes publiés ont changé. Rouvrez la liste et préparez un nouveau dossier.')
+        for ident in produits:
+            acte = _ligne(c, ident)
+            verifier_revision(acte, revisions.get(ident))
+            if acte['statut'] != 'valide':
+                raise ValueError('Seul un acte validé entre dans un dossier de publication.')
+        anciens = {}
+        try:
+            for ident, produit in produits.items():
+                fichier = dossier(donnees_dir, ident) / 'publie.pdf'
+                contenu_ancien = fichier.read_bytes() if fichier.exists() else None
+                ecrire_prive(fichier, produit['pdf'])
+                anciens[fichier] = contenu_ancien
+                c.execute('UPDATE publications SET empreinte_pdf=?, date_dossier=? WHERE id=?',
+                          (produit['empreinte'], date_dossier, ident))
+            c.commit()
+        except BaseException:
+            for fichier, contenu in anciens.items():
+                if contenu is None:
+                    fichier.unlink(missing_ok=True)
+                else:
+                    ecrire_prive(fichier, contenu)
+            raise
 
 
-def marquer_publie(base: Path, ident: str) -> dict:
+def enregistrer_dossier(base, donnees_dir, ident, empreinte, pdf, date_dossier, revision):
+    enregistrer_dossiers(base, donnees_dir, {ident: {'empreinte': empreinte, 'pdf': pdf}}, {ident: revision}, date_dossier)
+
+
+def marquer_publie(base: Path, ident: str, revision: int) -> dict:
     """Mise en ligne déclarée : à la date du dossier, imprimée sur le PDF déposé."""
     with ouvrir(base) as c:
+        c.execute('BEGIN IMMEDIATE')
         ligne = _ligne(c, ident)
+        verifier_revision(ligne, revision)
         if ligne['statut'] != 'valide':
             raise ValueError('Seul un acte validé peut être déclaré mis en ligne.')
         if not ligne['empreinte_pdf'] or not ligne['date_dossier']:
             raise ValueError('Préparez d’abord le dossier de publication.')
+        if ligne['date_dossier'] > aujourdhui():
+            raise ValueError('La date prévue est à venir. Confirmez la mise en ligne après le dépôt sur le site.')
         c.execute("UPDATE publications SET statut='publie', publie_le=date_dossier WHERE id=?", (ident,))
         return _public(_ligne(c, ident))
 
 
-def retirer(base: Path, ident: str, motif: str, par: str) -> dict:
+def retirer(base: Path, ident: str, motif: str, par: str, revision: int) -> dict:
     """Retrait de la publication d'un acte mis en ligne (publié par erreur, donnée personnelle restée visible…) : il sort
     de l'index et du fichier national des prochains dossiers ; son PDF et son empreinte restent conservés. Le fichier
     déposé sur le site de la collectivité est à retirer par l'agent."""
@@ -344,16 +469,22 @@ def retirer(base: Path, ident: str, motif: str, par: str) -> dict:
     if not motif or len(motif) > MOTIF_MAX:
         raise ValueError('Indiquez le motif du retrait.' if not motif else f'Motif trop long ({MOTIF_MAX} caractères au plus).')
     with ouvrir(base) as c:
-        if _ligne(c, ident)['statut'] != 'publie':
+        c.execute('BEGIN IMMEDIATE')
+        acte = _ligne(c, ident)
+        verifier_revision(acte, revision)
+        if acte['statut'] != 'publie':
             raise ValueError('Seul un acte publié peut être retiré de la publication.')
         c.execute("UPDATE publications SET statut='retire', retire_le=?, retire_par=?, retire_motif=? WHERE id=?",
                   (_maintenant(), par or '', motif, ident))
         return _public(_ligne(c, ident))
 
 
-def supprimer(base: Path, donnees_dir: Path, ident: str) -> None:
+def supprimer(base: Path, donnees_dir: Path, ident: str, revision: int) -> None:
     """Un acte saisi par erreur, tant qu'il n'est pas publié."""
     with ouvrir(base) as c:
-        refuser_si_fige(_ligne(c, ident))
+        c.execute('BEGIN IMMEDIATE')
+        acte = _ligne(c, ident)
+        refuser_si_fige(acte)
+        verifier_revision(acte, revision)
         c.execute('DELETE FROM publications WHERE id=?', (ident,))
     shutil.rmtree(dossier(donnees_dir, ident), ignore_errors=True)

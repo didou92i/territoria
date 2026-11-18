@@ -11,7 +11,7 @@ agents, et rapporter de quoi décider de la suite (mode équipe, réglages, tram
   pour son conteneur) est déconseillée.
 - **25 Go de disque libre** : modèle d'IA (7,4 Go au palier moyen), images des conteneurs (environ 2,5 Go), modèles de
   transcription (1,7 Go), données et sauvegardes.
-- BitLocker activé (le diagnostic signale son absence).
+- Vérifier BitLocker sur le volume qui héberge `territoria-donnees`. Sous macOS, le diagnostic interroge FileVault sur ce volume. Sous Linux, il suit les périphériques du point de montage ext2/3/4 ou XFS. Si le résultat est `inconnu` (permissions, partage réseau, montage complexe), faire vérifier ce stockage par la DSI avant le premier import réel. Vérifier séparément la destination des sauvegardes.
 - Accès à Internet pendant l'installation ; ensuite, seule la connexion à Légifrance sert (facultative).
 - Moteur de conteneurs : Podman, choisi par défaut (Docker Desktop est payant pour les administrations). LM Studio est
   installé par la collectivité, qui en accepte les conditions.

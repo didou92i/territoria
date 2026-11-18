@@ -101,16 +101,36 @@ function etat_lms {
     return 'absent'
 }
 
-# BitLocker du lecteur système, par manage-bde -status C: (sans élévation, la commande refuse : « inconnu »). Les mots
-# sont cherchés en anglais et en français, la console pouvant décoder les accents de plusieurs façons.
+# Identifier le volume du dossier, puis interroger BitLocker pour cette seule lettre de lecteur.
 function chiffrement_disque {
-    if (-not $script:EstWindows -or -not (commande_presente 'manage-bde')) { return 'inconnu' }
+    if (-not $script:EstWindows -or $script:Donnees.StartsWith('\\')) { return 'inconnu' }
     try {
-        $resultat = executer 'manage-bde' @('-status', 'C:') $null 20 $true
+        $dossier = $script:Donnees
+        while ($true) {
+            try {
+                $objet = Get-Item -LiteralPath $dossier -Force -ErrorAction Stop
+                break
+            } catch [System.Management.Automation.ItemNotFoundException] {
+                $parent = Split-Path -Parent $dossier
+                if ([string]::IsNullOrEmpty($parent) -or $parent -eq $dossier) { return 'inconnu' }
+                $dossier = $parent
+            }
+        }
+        if (-not $objet.PSIsContainer) { return 'inconnu' }
+        # Une jonction ou un lien peut mener à une autre machine ou à un autre lecteur.
+        for ($ancetre = $objet; $null -ne $ancetre; $ancetre = $ancetre.Parent) {
+            if ($ancetre.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { return 'inconnu' }
+        }
+        $volumes = @(Get-Volume -FilePath $objet.FullName -ErrorAction Stop)
+        if ($volumes.Count -ne 1 -or [string]$volumes[0].DriveLetter -notmatch '^[A-Z]$') { return 'inconnu' }
+        $montage = '{0}:' -f $volumes[0].DriveLetter
+        $etats = @(Get-BitLockerVolume -MountPoint $montage -ErrorAction Stop)
+        if ($etats.Count -ne 1 -or $etats[0].MountPoint -ne $montage) { return 'inconnu' }
+        $etat = $etats[0]
+        if ($etat.VolumeStatus -eq 'FullyEncrypted' -and $etat.ProtectionStatus -eq 'On') { return 'actif' }
+        if ($etat.VolumeStatus -eq 'FullyDecrypted' -or
+            ($etat.VolumeStatus -eq 'FullyEncrypted' -and $etat.ProtectionStatus -eq 'Off')) { return 'inactif' }
     } catch { return 'inconnu' }
-    if ($resultat.Code -ne 0) { return 'inconnu' }
-    if ($resultat.Sortie -match '(?i)protection\s+(off|d.{1,3}sactiv)') { return 'inactif' }
-    if ($resultat.Sortie -match '(?i)protection\s+(on|activ)') { return 'actif' }
     return 'inconnu'
 }
 

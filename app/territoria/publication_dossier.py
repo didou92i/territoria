@@ -59,10 +59,18 @@ def paragraphes_masques(acte: dict) -> list[str]:
 
 
 def _winansi(texte: str) -> str:
-    """Police standard du PDF (Helvetica, codage WinAnsi) : `œ`, `’`, `«`, `€` passent ; espaces fines et ligatures (texte
-    extrait d'un PDF) sont normalisées d'abord (NFKC) ; un caractère qui reste hors du codage devient `?`."""
-    texte = unicodedata.normalize('NFKC', texte).replace('≥', '>=').replace('≤', '<=')
-    return texte.encode('cp1252', errors='replace').decode('cp1252')
+    """Helvetica WinAnsi. Préserve les signes porteurs de sens, y compris les exposants."""
+    texte = unicodedata.normalize('NFC', texte).translate(_EQUIVALENTS_WINANSI)
+    try:
+        texte.encode('cp1252')
+    except UnicodeEncodeError:
+        raise ValueError('Le PDF de publication ne peut pas restituer un caractère de ce texte. '
+                         'Préparez la copie publique avec une police adaptée.') from None
+    return texte
+
+
+_EQUIVALENTS_WINANSI = str.maketrans({'≥': '>=', '≤': '<=', ' ': ' ', ' ': ' ', 'ﬀ': 'ff',
+                                     'ﬁ': 'fi', 'ﬂ': 'fl', 'ﬃ': 'ffi', 'ﬄ': 'ffl'})
 
 
 def pdf(acte: dict, paragraphes_masques: list[str], collectivite: str, date_mise_en_ligne: str) -> bytes:
@@ -141,14 +149,15 @@ def dossier(actes_a_publier: list[dict], deja_publies: list[dict], profil: dict,
             date_mise_en_ligne: str) -> tuple[bytes, dict[str, dict]]:
     """ZIP du dossier et, pour chaque nouvel acte, son PDF et l'empreinte SHA-256 de ce PDF ; les actes déjà publiés
     restent dans l'index et le CSV."""
-    if not actes_a_publier:
-        raise ValueError('Choisissez au moins un acte validé.')
     if date.fromisoformat(date_mise_en_ligne) < jour_courant():
         raise ValueError(MESSAGE_DATE)
     for acte in actes_a_publier:
         publication.verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
     tous = [a | {'mise_en_ligne': date_mise_en_ligne} for a in actes_a_publier] + \
            [a | {'mise_en_ligne': a.get('publie_le') or a.get('mise_en_ligne', '')} for a in deja_publies]
+    noms = {nom_fichier(a['numero']).casefold() for a in tous}
+    if len(noms) != len(tous):
+        raise ValueError('Plusieurs actes correspondent au même fichier PDF. Vérifiez les numéros et les retraits.')
     if any(a['type'] == 'deliberation' for a in tous) and not profil.get('siret'):
         raise ValueError(MESSAGE_SIRET)
     collectivite, adresse = profil.get('collectivite', ''), profil.get('adresse_actes', '')
@@ -160,5 +169,7 @@ def dossier(actes_a_publier: list[dict], deja_publies: list[dict], profil: dict,
             archive.writestr(nom_fichier(a['numero']), octets)
         archive.writestr('index.html', index_html(tous, adresse, collectivite))
         archive.writestr('deliberations.csv', csv_deliberations(tous, collectivite, profil.get('siret', ''), adresse))
-        archive.writestr('LISEZ-MOI.txt', LISEZ_MOI)
+        archive.writestr('LISEZ-MOI.txt', LISEZ_MOI if actes_a_publier else
+                         'Remplacez index.html sur le site et deliberations.csv sur votre espace open data.\n'
+                         'Retirez aussi du site les anciens PDF des actes retirés.\n')
     return sortie.getvalue(), empreintes

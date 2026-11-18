@@ -108,7 +108,7 @@ class Famille:
         """Document complet, commun à l'aperçu et au Word ; ce que la demande ne dit pas reste « [à compléter] »."""
         t = self.theme(donnees['contexte'])
         collectivite_nom = donnees.get('collectivite') or '[Collectivité à préciser]'
-        autorite, titre, lieu = _autorite(collectivite_nom)
+        autorite, titre, lieu = _autorite(collectivite_nom, donnees['contexte'])
         tous = [{'role': self.role_decision, 'title': '', 'texte': x} for x in genere['decisions']]
         tous += [{'role': role, 'title': intitule, 'texte': texte} for role, intitule, texte in t['fixes']]
         for n, a in enumerate(tous, 1):

@@ -267,7 +267,7 @@ class SanteTests(Base):
             statut, sante = self.appel('GET', '/api/admin/sante')
         self.assertEqual(statut, 200)
         self.assertEqual(sante['comptes']['documents'], 1 + len(fonds_publics.articles()))  # les articles livrés au démarrage
-        self.assertEqual(sante['version_base'], 15)
+        self.assertEqual(sante['version_base'], 17)
         self.assertEqual((sante['services'], sante['ia']['actif']['contexte']), ({'lm': True, 'n8n': True}, 8192))
         self.assertGreater(sante['disque']['total'], 0)
 

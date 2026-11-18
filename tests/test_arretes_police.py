@@ -146,6 +146,97 @@ class ConversationTests(Base):
             statut, reponse = self.appel('POST', '/api/chat', {'question': TRAVAUX, 'mode': 'libre'})
         self.assertIn('signalisation', reponse['answer'])  # un arrêté de circulation, lui, en a une
 
+    def test_executant_explicite_clausal_dans_le_word_et_ses_versions(self):
+        from docx import Document
+        charge = {'mode': 'libre', 'assistant': 'arrete'}
+        tours = ((TRAVAUX + ' La société Balise Exemple est chargée de poser et de retirer la signalisation.', 'Balise Exemple'),
+                 ('Corrigez la signalisation : l’entreprise Panneaux Fictifs pose, entretient et retire la signalisation.', 'Panneaux Fictifs'),
+                 ('Modifiez les horaires des travaux.', 'Panneaux Fictifs'))
+        with patch.object(llm_backend, 'chat', return_value=completion()):
+            for demande, nom in tours:
+                statut, r = self.appel('POST', '/api/chat', {**charge, 'question': demande})
+                self.assertEqual(statut, 200)
+                charge['conversation'] = r['conversation']
+                article = next(a['texte'] for a in r['artifact']['document']['articles'] if a['role'] == 'signalisation')
+                self.assertIn(nom, article)
+                if nom == 'Balise Exemple':
+                    self.assertIn('[à préciser]', article)  # l'entretien ne lui est pas attribué
+                else:
+                    self.assertNotIn('[', article)
+                    self.assertNotIn('Balise Exemple', article)
+                    self.assertNotIn('exécutant', r['answer'])
+                statut, raw = self.appel('GET', r['artifact']['download'])
+                self.assertEqual(statut, 200)
+                self.assertIn(article, [p.text for p in Document(io.BytesIO(raw)).paragraphs])
+
+    def test_attributions_partielles_et_retrait_explicite(self):
+        q = TRAVAUX + ' La pose des panneaux est assurée par les services techniques.'
+        donnees, _ = po.preparer(q, None, '')
+        self.assertEqual(donnees['executants_signalisation'], {'pose':'les services techniques'})
+        precedent = {'kind':'arrete_police', 'inputs':donnees}
+        regle, _ = po.preparer('Les services techniques ne posent plus les panneaux.', precedent, '')
+        self.assertFalse(regle['executants_signalisation'])
+        complet, _ = po.preparer('Responsable de la signalisation : TP Exemple SARL.', precedent, '')
+        self.assertEqual(set(complet['executants_signalisation'].values()), {'TP Exemple SARL'})
+
+    def test_entreprise_des_travaux_ne_designe_pas_un_executant(self):
+        for phrase in ('Les travaux sont réalisés par la société Balise Exemple.',
+                       'La société Balise Exemple ne pose pas la signalisation.'):
+            donnees, _ = po.preparer(TRAVAUX + ' ' + phrase, None, '')
+            acte = po.assembler(donnees, po.lire(completion(), donnees), po.textes())
+            self.assertNotIn('Balise Exemple', next(a['texte'] for a in acte['articles'] if a['role'] == 'signalisation'))
+
+    def test_revision_ciblee_preserve_exceptions_et_article_non_vise_jusqu_au_word(self):
+        from docx import Document
+        charge = {'mode':'libre', 'assistant':'arrete'}
+        mesure = 'Du 3 au 14 mars 2027, la circulation est interdite de 8 h à 17 h rue des Lilas, sauf pour les riverains et les véhicules de secours.'
+        deviation = 'Une déviation est mise en place par la rue des Tilleuls.'
+        with patch.object(llm_backend, 'chat', return_value=completion(decisions=(mesure, deviation))):
+            statut, initial = self.appel('POST', '/api/chat', {**charge,'question':TRAVAUX + ' Horaires de 8 h à 17 h.'})
+            self.assertEqual(statut, 200)
+        charge['conversation'] = initial['conversation']
+        heure = mesure.replace('8 h à 17 h','7 h 30 à 18 h')
+        lieu = deviation.replace('Tilleuls', 'Trembles')
+        essais = (
+            ('Modifiez les horaires pour les fixer de 7 h 30 à 18 h.', (heure.split(', sauf')[0] + '.', deviation), 400),
+            ('Modifiez la déviation par la rue des Trembles.', (lieu,), 400),
+            ('Modifiez la déviation par la rue des Trembles.', (mesure.replace('riverains', 'professionnels'), lieu), 400),
+            ('Modifiez la déviation par la rue des Trembles.', (mesure, deviation.replace('Tilleuls','Ormes')), 400),
+            ('Modifiez les horaires pour les fixer de 7 h 30 à 18 h.', (heure, deviation), 200),
+            ('Modifiez la déviation par la rue des Trembles.', (heure, lieu), 200),
+        )
+        for demande, decisions, attendu in essais:
+            with self.subTest(demande=demande, decisions=decisions), patch.object(llm_backend, 'chat', return_value=completion(decisions=decisions)):
+                statut, r = self.appel('POST', '/api/chat', {**charge, 'question':demande})
+                self.assertEqual(statut, attendu)
+                if attendu == 400:
+                    self.assertIn('projet précédent', r['error'].lower())
+                else:
+                    _, raw = self.appel('GET', r['artifact']['download'])
+                    paragraphes = [p.text for p in Document(io.BytesIO(raw)).paragraphs]
+                    for decision in decisions:
+                        self.assertIn(decision, paragraphes)
+        _, raw = self.appel('GET', initial['artifact']['download'])
+        self.assertIn(mesure, [p.text for p in Document(io.BytesIO(raw)).paragraphs])
+
+    def test_montant_et_duree_ne_changent_pas_les_autres_conditions(self):
+        initial = 'Le permis fixe une redevance de 30 € pour 5 jours, sauf pour les riverains.'
+        for demande, nouveau in (('Portez la redevance à 45 €.', initial.replace('30 €','45 €')),
+                                 ('Limitez la durée à 3 jours.', initial.replace('5 jours','3 jours'))):
+            with self.subTest(demande=demande):
+                donnees = {'contexte': initial + ' ' + demande, 'decisions_precedentes':[initial], 'derniere_precision':demande}
+                self.assertEqual(po.lire(completion(decisions=(nouveau,)), donnees)['decisions'], [nouveau])
+                with self.assertRaisesRegex(ValueError, 'projet précédent'):
+                    po.lire(completion(decisions=(nouveau.split(', sauf')[0] + '.',)), donnees)
+
+    def test_voie_presente_dans_un_autre_article_ne_devient_pas_une_correction_autorisee(self):
+        ancien = ('La déviation passe par la rue des Lilas.', 'La seconde déviation passe par la rue des Tilleuls.')
+        demande = 'Modifiez la première déviation pour emprunter la rue des Trembles.'
+        mauvais = (ancien[0].replace('Lilas', 'Trembles'), ancien[1].replace('Tilleuls','Lilas'))
+        donnees = {'contexte': demande, 'decisions_precedentes':ancien, 'derniere_precision':demande}
+        with self.assertRaisesRegex(ValueError, 'projet précédent'):
+            po.lire(completion(decisions=mauvais), donnees)
+
     def test_une_modification_transmet_les_decisions_precedentes_a_reprendre(self):
         # Test de la démonstration : en ajoutant l'arrêt de bus, le modèle avait réécrit l'article 2 et perdu ses dates. Il
         # reçoit désormais les décisions du projet précédent, avec la consigne de reprendre telles quelles celles que la

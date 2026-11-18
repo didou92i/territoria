@@ -136,19 +136,31 @@ def _peut_valider(compte, acte):
             and acte['cree_par'] == compte['id'])
 
 
-def _paragraphes_pdf(pages):
-    """Lignes d'un PDF regroupées en paragraphes : un paragraphe se termine par « . », « ; » ou « : »."""
-    paragraphes, courant = [], []
-    for page in pages:
-        for ligne in page.splitlines():
-            if publication.MENTION_PROJET.fullmatch(ligne.strip()):
-                raise ValueError(publication.MESSAGE_PROJET)
-            if ligne.strip():
-                courant.append(ligne.strip())
-                if ligne.rstrip().endswith(('.', ';', ':')):
-                    paragraphes.append(' '.join(courant))
-                    courant = []
-    return paragraphes + ([' '.join(courant)] if courant else [])
+def _lire_source_publication(source):
+    try:
+        return (publication.paragraphes_docx(source) if source.suffix == '.docx'
+                else publication.paragraphes_pdf(source))
+    except ValueError:
+        raise
+    except Exception:
+        raise ValueError('Déposez l’acte en Word (.docx) ou en PDF texte lisible.') from None
+
+
+def _verifier_source_publication(acte):
+    """Contrôle également les anciennes fiches dont une annexe a pu disparaître à l'import."""
+    publication.verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
+    if acte['source'] == 'registre':
+        if not re.fullmatch(r'[0-9a-f]{32}', acte['acte_id']):
+            raise ValueError('Référence du registre indisponible. Déposez la version définitive.')
+        source = server.DATA / 'arretes' / (acte['acte_id'] + '.docx')
+    else:
+        dossier = publication.dossier(server.DATA, acte['id'])
+        sources = [p for p in (dossier / 'source.pdf', dossier / 'source.docx') if p.is_file()]
+        source = sources[0] if len(sources) == 1 else None
+    if source is None or not source.is_file():
+        raise ValueError('Source originale indisponible. Retirez cette fiche et déposez la version définitive.')
+    if _lire_source_publication(source) != acte['paragraphes']:
+        raise ValueError('Le texte de la source diffère de la fiche. Retirez cette fiche et déposez la version définitive.')
 
 
 def _depot_publication(requete, corps, compte):
@@ -163,17 +175,7 @@ def _depot_publication(requete, corps, compte):
     with tempfile.TemporaryDirectory(prefix='territoria-depot-') as tmp:
         source = Path(tmp) / f'source{extension}'
         source.write_bytes(corps)
-        try:
-            paragraphes = (publication.paragraphes_docx(source) if extension == '.docx'
-                           else _paragraphes_pdf(server.pages_importees(source)[0]))
-        except server.Illisible:  # fichier abîmé : même consigne qu'avant pour un acte à déposer
-            raise ValueError('Déposez l’acte en Word (.docx) ou en PDF.') from None
-        except ValueError as erreur:
-            if extension == '.pdf' and 'Aucun texte lisible' in str(erreur):
-                raise ValueError('Ce PDF est une image : déposez la version Word, ou un PDF texte.') from None
-            raise
-        except Exception:
-            raise ValueError('Déposez l’acte en Word (.docx) ou en PDF.') from None
+        paragraphes = _lire_source_publication(source)
         if not paragraphes:
             raise ValueError('Ce PDF est une image : déposez la version Word, ou un PDF texte.')
         acte = publication.creer(server.DB, server.DATA, type=q.get('type', ''), numero=q.get('numero', ''),
@@ -189,7 +191,7 @@ def _depot_publication(requete, corps, compte):
 def _demander_ia(requete):
     """Une demande de repérage des noms, au modèle choisi dans les réglages (plafonnée pour un visiteur de démonstration)."""
     modele = llm_backend.require_configured(server.DATA)['model']
-    return llm_backend.chat(server.DATA, {'request': requete | {'model': modele}})
+    return llm_backend.chat(server.DATA, {'provider': llm_backend.PROVIDER, 'request': requete | {'model': modele}})
 
 
 def _publications_post(p, d, compte):
@@ -207,18 +209,25 @@ def _publications_post(p, d, compte):
         _noter('publication_ajoutee', acte['id'], 'registre')
         return _json(201, acte)
     if p == '/api/publications/dossier':
-        ids = d.get('ids') if isinstance(d.get('ids'), list) else []
-        actes = [_publication(compte, str(i)) for i in ids]
-        if not actes or any(not _peut_valider(compte, a) for a in actes):
-            return _json(403, {'error': MESSAGE_VALIDATION}) if actes else _json(400, {'error': 'Choisissez au moins un acte validé.'})
+        ids = d.get('ids')
+        if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids) or len(set(ids)) != len(ids):
+            raise ValueError('Sélection des actes invalide.')
+        actes = [_publication(compte, i) for i in ids]
+        if (not actes and compte['role'] not in ('administrateur', 'referent') and not _visiteur(compte)
+                or any(not _peut_valider(compte, a) for a in actes)):
+            return _json(403, {'error': MESSAGE_VALIDATION})
         if any(a['statut'] != 'valide' for a in actes):
             raise ValueError('Seul un acte validé entre dans un dossier de publication.')
+        revisions = d.get('revisions')
+        for acte in actes:
+            publication.verifier_revision(acte, revisions.get(acte['id']) if isinstance(revisions, dict) else None)
+            _verifier_source_publication(acte)
         proprietaire = None if compte['role'] in ('administrateur', 'referent') else compte['id']
         deja = [a for a in publication.liste(server.DB, proprietaire, REGLAGES.demonstration) if a['statut'] == 'publie']
         date_mise_en_ligne = str(d.get('date', '')) or publication.aujourdhui()
         archive, empreintes = publication_dossier.dossier(actes, deja, branding.profile(server.DATA), date_mise_en_ligne)
-        for ident, produit in empreintes.items():
-            publication.enregistrer_dossier(server.DB, server.DATA, ident, produit['empreinte'], produit['pdf'], date_mise_en_ligne)
+        index = (proprietaire, REGLAGES.demonstration, [(a['id'], a['revision']) for a in deja])
+        publication.enregistrer_dossiers(server.DB, server.DATA, empreintes, revisions, date_mise_en_ligne, index=index)
         _noter('dossier_publication', detail=str(len(actes)))
         return _reponse(200, archive, 'application/zip', f'attachment; filename="publication-{date_mise_en_ligne}.zip"')
     m = PUBLICATION_ACTION.fullmatch(p)
@@ -228,27 +237,32 @@ def _publications_post(p, d, compte):
     acte = _publication(compte, ident)
     if action == 'reperer':
         publication.refuser_si_fige(acte)  # avant d'appeler l'IA, qui coûte
+        publication.verifier_revision(acte, d.get('revision'))
         texte = '\n'.join([acte['objet']] + acte['paragraphes'])
-        proposes, avertissement = anonymisation.reperer(texte, _demander_ia)
-        manuels = [p for p in acte['passages'] if p['origine'] == 'manuel']
-        vus = {p['texte'].lower() for p in proposes}
-        acte = publication.enregistrer_reperage(server.DB, ident, proposes + [p for p in manuels if p['texte'].lower() not in vus],
-                                                avertissement)
-        return _json(200, {'passages': acte['passages'], 'avertissement': avertissement, 'statut': acte['statut']})
+        modele_local = _demander_ia if llm_backend.read(server.DATA)['provider'] == llm_backend.PROVIDER else None
+        proposes, avertissement = anonymisation.reperer(texte, modele_local)
+        # Un nouveau repérage ajoute des propositions aux choix déjà relus.
+        precedents = acte['passages']
+        deja_relus = {p['texte'].casefold() for p in precedents}
+        nouveaux = [p for p in proposes if p['texte'].casefold() not in deja_relus]
+        acte = publication.enregistrer_reperage(server.DB, ident, precedents + nouveaux, avertissement, d.get('revision'))
+        return _json(200, {'passages': acte['passages'], 'avertissement': avertissement, 'statut': acte['statut'], 'revision': acte['revision']})
     if action == 'passages':
-        return _json(200, publication.enregistrer_passages(server.DB, ident, d.get('passages')))
+        modifie = publication.enregistrer_passages(server.DB, ident, d.get('passages'), d.get('revision'))
+        return _json(200, publication.avec_apercu(acte | modifie))
     if not _peut_valider(compte, acte):
         return _json(403, {'error': MESSAGE_VALIDATION})
     if action == 'valider':
-        acte = publication.valider(server.DB, server.DATA, ident, compte['id'])
+        _verifier_source_publication(acte)
+        acte = publication.valider(server.DB, server.DATA, ident, compte['id'], d.get('revision'))
         _noter('publication_validee', ident)
         return _json(200, acte)
     if action == 'retrait':
-        acte = publication.retirer(server.DB, ident, d.get('motif'), compte['id'])
+        acte = publication.retirer(server.DB, ident, d.get('motif'), compte['id'], d.get('revision'))
         _noter('publication_retiree', ident)
         return _json(200, acte)
-    publication.verifier_version(acte['objet'], acte['paragraphes'], fiche_existante=True)
-    acte = publication.marquer_publie(server.DB, ident)  # à la date du dossier, imprimée sur le PDF
+    _verifier_source_publication(acte)
+    acte = publication.marquer_publie(server.DB, ident, d.get('revision'))  # à la date du dossier, imprimée sur le PDF
     _noter('publication_en_ligne', ident)
     return _json(200, acte)
 
@@ -453,6 +467,8 @@ def _traiter(methode, chemin, requete, entetes, corps):
             return _json(403, {'error': str(erreur)}), _code(erreur)
         except LookupError as erreur:
             return _json(404, {'error': 'Introuvable.'}), _code(erreur)
+        except publication.RevisionPerimee as erreur:
+            return _json(409, {'error': str(erreur), 'code': 'revision_publication'}), None
         except LimiteAtteinte as erreur:
             return _json(429, {'error': str(erreur)}), _code(erreur)
         except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as erreur:
@@ -467,7 +483,9 @@ def _traiter(methode, chemin, requete, entetes, corps):
             return _json(500, ERREUR_TRAITEMENT), _code(erreur)
     if methode == 'DELETE':
         try:
-            return _delete(chemin, compte), None
+            return _delete(chemin, compte, requete), None
+        except publication.RevisionPerimee as erreur:
+            return _json(409, {'error': str(erreur), 'code': 'revision_publication'}), None
         except PermissionError as erreur:
             return _json(403, {'error': str(erreur)}), _code(erreur)
         except LookupError as erreur:
@@ -608,13 +626,15 @@ def _plage(flux, taille, format_, entetes):
     return Reponse(reponse.status, entetes_sortie, reponse.body)
 
 
-def _delete(chemin, compte):
+def _delete(chemin, compte, requete):
     """Suppression réelle d'une conversation, d'un document, d'un assistant personnalisé, d'un service ou d'une séance ;
     sinon 405."""
     m = PUBLICATION.fullmatch(chemin)
     if m:
         _publication(compte, m.group(1))
-        publication.supprimer(server.DB, server.DATA, m.group(1))
+        valeur = parse_qs(requete).get('revision', [''])[0]
+        revision = int(valeur) if re.fullmatch(r'[0-9]{1,19}', valeur) else None
+        publication.supprimer(server.DB, server.DATA, m.group(1), revision)
         _noter('publication_supprimee', m.group(1))
         return _json(200, {'supprime': True})
     m = re.fullmatch(r'/api/seances/([0-9a-f]{32})', chemin)
@@ -714,7 +734,7 @@ def _get(p, q, compte):
         return _json(200, {'matieres': nomenclature.matieres()})
     m = PUBLICATION.fullmatch(p)
     if m:
-        return _json(200, _publication(compte, m.group(1)))
+        return _json(200, publication.avec_apercu(_publication(compte, m.group(1))))
     data = server.DATA
     if p == '/api/seances':
         return _json(200, {'seances': seances.lister(server.DB, compte['id'])})

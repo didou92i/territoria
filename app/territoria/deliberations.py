@@ -18,6 +18,7 @@ import json
 import os
 import re
 import unicodedata
+from decimal import Decimal
 from pathlib import Path
 
 from . import deliberations_seance
@@ -143,6 +144,15 @@ def theme(texte: str):
     return next((t for t in THEMES if re.search(t[1], simple)), THEME_GENERAL)
 
 
+def demande_de_lecture(question: str) -> bool:
+    """Une synthèse ou une explication explicite porte sur le projet déjà rédigé."""
+    return bool(re.match(
+        r"\s*(?:(?:peux[- ]tu|pouvez[- ]vous|pourrais[- ]tu|pourriez[- ]vous|merci de)\s+)?"
+        r"(?:m[’']|me )?(?:resum\w*|synthetis\w*|expliqu\w*|analys\w*|comment\w*|"
+        r"(?:fais|faites|faire|redig\w*|propos\w*)\s+(?:un[e]?|l[ea])\s+(?:resume|synthese|analyse|explication))\b",
+        _plain(question)))
+
+
 def est_demande(question: str, precedent=None, assistant: str = '') -> bool:
     texte = _plain(question)
     genre = precedent.get('kind') if isinstance(precedent, dict) else ''
@@ -163,6 +173,90 @@ def est_demande(question: str, precedent=None, assistant: str = '') -> bool:
     return bool((indefinie and verbe) or titre)
 
 
+# Les montants sont comparés au centime, indépendamment des séparateurs de milliers.
+_MONTANT = re.compile(r'(?<![\w,.-])([+−-]?\d+(?:[. \u00a0\u202f]\d{3})*(?:,\d{1,2})?)\s*(?:€|euros?\b)', re.I)
+_REVISION = re.compile(r'\b(?:modifi|chang|corrig|rectifi|remplac|port|ramen|rev[iou]|fix|rehauss|abaiss|pass|augment|redui)\w*\b|\bnouveau montant\b')
+
+
+def _montants(texte: str) -> list[str]:
+    montants = []
+    for valeur in _MONTANT.findall(texte):
+        brut = re.sub(r'[.\s]', '', valeur).replace(',', '.').replace('−', '-')
+        montant = format(Decimal(brut), 'f')
+        if '.' in montant:
+            montant = montant.rstrip('0').rstrip('.')
+        montants.append(montant)
+    return montants
+
+
+def _cibles_montant(question: str, decisions: list[str]) -> list[int]:
+    numero = re.search(r'\b(?:article|décision)\s+(?:n[°o]\s*)?(\d+)\b', question, re.I)
+    if numero:
+        return [int(numero[1]) - 1] if 0 < int(numero[1]) <= len(decisions) else []
+    # Une désignation explicite du bénéficiaire peut départager deux décisions de même montant.
+    noms = re.findall(r"\b(?:pour|au profit de|en faveur de|bénéficiaire\s*:)\s+(?:(?:le|la|les)\s+|l[’'])?([^,;.?!:]+)",
+                      question, re.I)
+    if noms:
+        nom = noms[-1].strip()
+        motif = re.escape(nom).replace(r'\ ', r'\s+')
+        return [i for i, texte in enumerate(decisions) if re.search(r'(?<!\w)' + motif + r'(?!\w)', texte, re.I)]
+    return list(range(len(decisions)))
+
+
+def _revision_montant(question: str, decisions: list[str], precedente: dict) -> tuple[dict, str]:
+    """Relier le montant au dispositif précédent, y compris lorsque deux bénéficiaires touchent la même somme."""
+    valeurs = list(dict.fromkeys(_montants(question)))
+    if not valeurs or not _REVISION.search(_plain(question)):
+        # Une autre correction peut légitimement changer la rédaction des articles.
+        return {cle: v for cle, v in precedente.items() if cle != 'decisions_attendues'}, ''
+    occurrences = list(_MONTANT.finditer(question))
+    ancien = None
+    if len(valeurs) == 1:
+        nouveau = valeurs[0]
+    elif len(valeurs) == 2:
+        liaison = _plain(question[occurrences[0].end():occurrences[1].start()]).strip()
+        if liaison in ('par', 'a'):
+            ancien, nouveau = valeurs
+        elif liaison in ('au lieu de', 'et non', 'plutot que'):
+            nouveau, ancien = valeurs
+        else:
+            return precedente, 'Précisez quel montant doit être remplacé, sous la forme « remplacez X € par Y € ».'
+    else:
+        return precedente, 'Précisez un remplacement à la fois, sous la forme « remplacez X € par Y € ».'
+    revision = {}
+    conserves = set()
+    if decisions:
+        cibles = [i for i in _cibles_montant(question, decisions)
+                  if _montants(decisions[i]) and (ancien is None or ancien in _montants(decisions[i]))]
+        if len(cibles) != 1:
+            return precedente, 'Quel article faut-il modifier ? Précisez son numéro ou son bénéficiaire avec le montant à corriger.'
+        indice = cibles[0]
+        sommes = _montants(decisions[indice])
+        if ancien is None:
+            if len(sommes) != 1:
+                return precedente, 'Plusieurs montants figurent dans cet article. Précisez « remplacez X € par Y € ».'
+            ancien = sommes[0]
+        if sommes.count(ancien) > 1:
+            return precedente, 'Ce montant figure plusieurs fois dans le même article. Précisez le libellé à modifier.'
+        attendues = list(decisions)
+        libelle = next(m[0] for m in occurrences if _montants(m[0]) == [nouveau])
+        attendues[indice] = _MONTANT.sub(lambda m: libelle if _montants(m[0]) == [ancien] else m[0], decisions[indice])
+        revision['decisions_attendues'] = attendues
+        conserves = set(_montants(' '.join(attendues)))
+    retires = set(precedente.get('retires', []))
+    if ancien is not None:
+        retires.add(ancien)
+    retires -= conserves | {nouveau}
+    attendus = (set(precedente.get('attendus', [])) - retires) | {nouveau} | conserves
+    revision.update(attendus=sorted(attendus), retires=sorted(retires))
+    return revision, ''
+
+
+def _dispositif_comparable(decisions: list[str]) -> list[str]:
+    # Un montant peut s’écrire « 2 000 euros » ou « 2000,00 € ». Tout autre changement reste visible.
+    return [' '.join(_MONTANT.sub(lambda m: _montants(m[0])[0] + ' €', texte).split()) for texte in decisions]
+
+
 def preparer(question: str, precedent, collectivite_enregistree: str) -> tuple[dict, str]:
     """Données de rédaction (contexte cumulé au fil de la conversation) et, s'il en faut une, la question à poser."""
     anterieures = precedent.get('inputs', {}) if isinstance(precedent, dict) and precedent.get('kind', '').startswith('deliberation') else {}
@@ -170,13 +264,37 @@ def preparer(question: str, precedent, collectivite_enregistree: str) -> tuple[d
         contexte = anterieures.get('contexte', '') + '\n\nPrécision la plus récente, prioritaire :\n' + question
     else:
         contexte = question
-    donnees = {'contexte': contexte[:6000], 'collectivite': collectivite(question) or anterieures.get('collectivite') or collectivite_enregistree}
+    # Une demande entrante tient dans 12 000 caractères. En cas de longue conversation, conserver
+    # son objet initial et la fin contenant les dernières précisions, y compris le dernier tour entier.
+    if len(contexte) > 24000:
+        contexte = contexte[:6000] + '\n[…]\n' + contexte[-17994:]
+    donnees = {'contexte': contexte, 'collectivite': collectivite(question) or anterieures.get('collectivite') or collectivite_enregistree}
     # Les projets enregistrés avant la prise en compte des effectifs n'ont que le contexte.
     mentions = anterieures.get('mentions_seance')
     if mentions is None:
         mentions = deliberations_seance.relever(anterieures.get('contexte', ''))
     donnees['mentions_seance'] = deliberations_seance.relever(question, mentions)
     donnees['seance'] = donnees['mentions_seance'].get('seance') or anterieures.get('seance', '')
+    document = precedent.get('document', {}) if anterieures else {}
+    decisions = [article['texte'] for article in document.get('articles', []) if article.get('role') == 'decision']
+    if not decisions:
+        decisions = anterieures.get('decisions_precedentes', [])
+    if decisions:
+        donnees['decisions_precedentes'] = decisions
+    if anterieures:
+        demande = question
+        en_attente = anterieures.get('demande_montant_a_preciser')
+        if en_attente and not (_montants(question) and _REVISION.search(_plain(question))):
+            demande = en_attente + '. ' + question
+        revision, precision = _revision_montant(demande, decisions, anterieures.get('revision_montant', {}))
+        if revision:
+            donnees['revision_montant'] = revision
+        if precision:
+            donnees['demande_montant_a_preciser'] = demande
+            return donnees, precision
+    incoherence = deliberations_seance.incoherence(donnees['mentions_seance'])
+    if incoherence:
+        return donnees, incoherence
     # Seuls comptent les mots qui disent l'objet : « Rédige une délibération » seule appelle une question, pas « … pour
     # dénommer la place Jean-Moulin ».
     vides = r'\b(redig\w*|prepar\w*|propos\w*|ecri\w*|gener\w*|fai[st]?|faire|etabli\w*|moi|nous|svp|stp|merci|un|une|projet|de|d|du|des|la|le|les|l|pour|deliberations?|conseil|municipal|precision|plus|recente|prioritaire)\b'
@@ -222,6 +340,11 @@ def requete(donnees: dict, modele: str, sources: dict) -> dict:
     utilisateur = {'collectivite': donnees['collectivite'], 'demande': donnees['contexte'],
                    'valeurs_donnees': valeurs_donnees(donnees['contexte']),
                    'textes_applicables': [{'article': a, 'extrait': sources[a]['text'][:EXTRAITS_LONGS.get(a, EXTRAIT)]} for a in articles if a in sources]}
+    if donnees.get('decisions_precedentes'):
+        utilisateur['decisions_precedentes'] = donnees['decisions_precedentes']
+        systeme += ' Reprends les décisions précédentes mot pour mot, sauf les éléments explicitement modifiés.'
+    if donnees.get('revision_montant'):
+        utilisateur['revision_montant_euros'] = donnees['revision_montant']
     schema = {'type': 'object', 'properties': {
         'objet': {'type': 'string'},
         'considerants': {'type': 'array', 'minItems': 1, 'maxItems': 4, 'items': {'type': 'string'}},
@@ -300,7 +423,7 @@ def lire(completion, donnees: dict) -> dict:
             or not isinstance(decisions, list) or not 1 <= len(decisions) <= 5
             or not all(isinstance(x, str) and x.strip() and len(x) <= 2000 for x in considerants + decisions)):
         raise ValueError('Le modèle n’a pas produit un projet utilisable ; réessayez.')
-    connus = _nombres_connus(donnees['contexte'])
+    connus = _nombres_connus(' '.join([donnees['contexte'], *donnees.get('decisions_precedentes', [])]))
     remplaces = False
 
     def nettoyer(texte):
@@ -314,6 +437,15 @@ def lire(completion, donnees: dict) -> dict:
 
     resultat = {'objet': nettoyer(objet).rstrip('.'), 'considerants': [nettoyer(x) for x in considerants],
                 'decisions': [nettoyer(x) for x in decisions], 'vigilances': []}
+    if donnees.get('revision_montant'):
+        revision = donnees['revision_montant']
+        dispositif = set(_montants(' '.join(resultat['decisions'])))
+        redaction = dispositif | set(_montants(' '.join([resultat['objet'], *resultat['considerants']])))
+        attendu = revision.get('decisions_attendues')
+        if attendu and _dispositif_comparable(resultat['decisions']) != _dispositif_comparable(attendu):
+            raise ReponseInvalide('La rédaction a modifié une décision en plus du montant demandé. Le projet précédent reste disponible.')
+        if not set(revision['attendus']) <= dispositif or set(revision['retires']) & redaction:
+            raise ReponseInvalide('La rédaction ne respecte pas la correction du montant. Précisez le remplacement et réessayez.')
     if remplaces:
         resultat['vigilances'].append('Un montant, un nombre ou une date absent de la demande a été remplacé par « [à compléter] ».')
     return resultat

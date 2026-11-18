@@ -98,14 +98,18 @@ def noms_ia(texte: str, demander: Callable[[dict], dict]) -> list[dict]:
     return passages
 
 
-def reperer(texte: str, demander: Callable[[dict], dict]) -> tuple[list[dict], str | None]:
+def reperer(texte: str, demander: Callable[[dict], dict] | None) -> tuple[list[dict], str | None]:
     """Règles et IA réunies, sans doublon (même texte, sans tenir compte de la casse), dans l'ordre du texte ; avec
     l'avertissement quand l'IA n'a pas pu repérer les noms."""
     avertissement, par_regles = None, regles(texte)
-    try:
-        proposes = par_regles + noms_ia(texte, demander)
-    except IAIndisponible:
-        proposes, avertissement = par_regles, AVERTISSEMENT_IA
+    proposes = par_regles
+    if demander is None:
+        avertissement = 'Seules les règles locales ont été appliquées. Vérifiez les noms et masquez-les manuellement.'
+    else:
+        try:
+            proposes = par_regles + noms_ia(texte, demander)
+        except IAIndisponible:
+            avertissement = AVERTISSEMENT_IA
     uniques, vus = [], set()
     for passage in proposes:
         if passage['texte'].lower() not in vus:
@@ -132,6 +136,28 @@ def _zones(texte: str, passage: dict):
 def occurrences(texte: str, passage: dict) -> int:
     """Nombre d'endroits où le passage serait masqué ; 0 : il ne masquerait rien (à refuser avant validation)."""
     return sum(1 for _ in _zones(texte, passage))
+
+
+def zones_relecture(texte: str, passages: list[dict]) -> list[list]:
+    """Intervalles en caractères Unicode du texte original. Une zone cochée l'emporte lors d'un chevauchement."""
+    bornes = {}
+    for passage in passages:
+        etat = int(passage['coche'])
+        for m in _zones(texte, passage):
+            bornes.setdefault(m.start(), [0, 0])[etat] += 1
+            bornes.setdefault(m.end(), [0, 0])[etat] -= 1
+    zones, actifs, precedent = [], [0, 0], 0
+    for position, variation in sorted(bornes.items()):
+        if any(actifs):
+            masque = actifs[1] > 0
+            if zones and zones[-1][1] == precedent and zones[-1][2] == masque:
+                zones[-1][1] = position
+            else:
+                zones.append([precedent, position, masque])
+        actifs[0] += variation[0]
+        actifs[1] += variation[1]
+        precedent = position
+    return zones
 
 
 def masquer(texte: str, passages: list[dict]) -> str:
